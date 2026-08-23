@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { ConfirmDeleteModal, openConfirm } from "@/components/ui/confirm-delete-modal";
 import { PlayersTable } from "@/components/players/players-table";
 import { api } from "@/lib/api";
 import type { PlayerListItem, PlayerListResponse } from "@/lib/players";
@@ -16,6 +17,7 @@ export default function PlayersPage() {
   const [role, setRole] = useState("");
   const [country, setCountry] = useState("");
   const [error, setError] = useState("");
+  const [pendingDelete, setPendingDelete] = useState<PlayerListItem | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -52,12 +54,6 @@ export default function PlayersPage() {
     return () => clearTimeout(timeout);
   }, [load]);
 
-  async function onDelete(player: PlayerListItem) {
-    if (!window.confirm(`Delete ${player.name}?`)) return;
-    await api(`/api/v1/players/${player.id}`, { method: "DELETE" });
-    await load();
-  }
-
   return (
     <div>
       {error ? (
@@ -88,7 +84,22 @@ export default function PlayersPage() {
           setPage(1);
         }}
         onPageChange={setPage}
-        onDelete={onDelete}
+        onDelete={(player) => openConfirm(setPendingDelete, player)}
+      />
+      <ConfirmDeleteModal
+        open={Boolean(pendingDelete)}
+        title="Delete player?"
+        description={
+          pendingDelete
+            ? `“${pendingDelete.name}” will be permanently deleted. This cannot be undone.`
+            : ""
+        }
+        onClose={() => setPendingDelete(null)}
+        onConfirm={async () => {
+          if (!pendingDelete) return;
+          await api(`/api/v1/players/${pendingDelete.id}`, { method: "DELETE" });
+          await load();
+        }}
       />
     </div>
   );

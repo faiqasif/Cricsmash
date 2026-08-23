@@ -16,6 +16,12 @@ function breadcrumbsFor(pathname: string): { parent: string; current: string; pa
   if (pathname.startsWith("/players/") && pathname.endsWith("/edit")) {
     return { parent: "Players", current: "Edit player", parentHref: "/players" };
   }
+  if (pathname === "/questions/player/new") {
+    return { parent: "Question", current: "Add a new question", parentHref: "/questions/player" };
+  }
+  if (pathname.startsWith("/questions/player/") && pathname.endsWith("/edit")) {
+    return { parent: "Question", current: "Edit question", parentHref: "/questions/player" };
+  }
   if (pathname.startsWith("/users/") && pathname !== "/users") {
     return { parent: "User Management", current: "User details", parentHref: "/users" };
   }
@@ -49,7 +55,7 @@ function breadcrumbsFor(pathname: string): { parent: string; current: string; pa
 export function TopBar({ onMenuClick }: TopBarProps) {
   const pathname = usePathname();
 
-  if (pathname === "/players") {
+  if (pathname === "/players" || pathname === "/questions/player" || pathname === "/categories") {
     return null;
   }
 

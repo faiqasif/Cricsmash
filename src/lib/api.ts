@@ -1,4 +1,11 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
+function apiBaseUrl() {
+  const fromEnv = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "");
+  if (fromEnv) return fromEnv;
+  if (process.env.NODE_ENV === "development") return "http://localhost:8080";
+  return "";
+}
+
+const API_URL = apiBaseUrl();
 
 import {
   clearSession,
