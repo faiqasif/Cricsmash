@@ -19,7 +19,6 @@ const nextConfig: NextConfig = {
     if (!apiOrigin) return [];
     return [
       {
-        
         source: "/api/:path*",
         destination: `${apiOrigin}/api/:path*`,
       },
