@@ -32,7 +32,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
         onClick={onClose}
       />
       <aside
-        className={`fixed top-4 bottom-4 left-4 z-40 flex w-[260px] flex-col overflow-hidden rounded-[32px] bg-[#0b0b13] shadow-[0_20px_60px_rgba(0,0,0,0.35)] transition-transform duration-200 lg:sticky lg:top-4 lg:bottom-auto lg:left-auto lg:h-[calc(100vh-2rem)] lg:translate-x-0 ${
+        className={`fixed top-4 bottom-4 left-4 z-40 flex w-[260px] shrink-0 flex-col overflow-hidden rounded-[32px] bg-[#0b0b13] shadow-[0_20px_60px_rgba(0,0,0,0.35)] transition-transform duration-200 lg:relative lg:top-auto lg:bottom-auto lg:left-auto lg:h-full lg:translate-x-0 ${
           open ? "translate-x-0" : "-translate-x-[calc(100%+1.5rem)]"
         }`}
       >
