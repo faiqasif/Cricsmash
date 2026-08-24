@@ -26,6 +26,8 @@ type QuestionsTableProps = {
   onCategoryChange: (value: string) => void;
   onPageChange: (page: number) => void;
   onDelete: (question: Question) => void;
+  basePath?: string;
+  showCategoryFilter?: boolean;
 };
 
 export function QuestionsTable({
@@ -44,6 +46,8 @@ export function QuestionsTable({
   onCategoryChange,
   onPageChange,
   onDelete,
+  basePath = "/questions/player",
+  showCategoryFilter = true,
 }: QuestionsTableProps) {
   const empty = !loading && questions.length === 0;
   const from = total === 0 ? 0 : (page - 1) * pageSize + 1;
@@ -90,16 +94,18 @@ export function QuestionsTable({
           <option value="inactive">Inactive</option>
         </FilterSelect>
 
-        <FilterSelect value={categoryId} onChange={onCategoryChange} placeholder="All Categories">
-          {categories.map((item) => (
-            <option key={item.id} value={item.id}>
-              {item.name}
-            </option>
-          ))}
-        </FilterSelect>
+        {showCategoryFilter ? (
+          <FilterSelect value={categoryId} onChange={onCategoryChange} placeholder="All Categories">
+            {categories.map((item) => (
+              <option key={item.id} value={item.id}>
+                {item.name}
+              </option>
+            ))}
+          </FilterSelect>
+        ) : null}
 
         <Link
-          href="/questions/player/new"
+          href={`${basePath}/new`}
           className="inline-flex h-12 shrink-0 items-center justify-center gap-2 rounded-full bg-purple px-6 text-sm font-medium text-white shadow-[0_0_24px_rgba(124,92,255,0.4)] transition hover:bg-[#6d4dff]"
         >
           <Plus className="size-4" />
@@ -157,7 +163,7 @@ export function QuestionsTable({
                   <td className="px-5 py-4">
                     <div className="flex items-center gap-3">
                       <Link
-                        href={`/questions/player/${question.id}/edit`}
+                        href={`${basePath}/${question.id}/edit`}
                         className="text-zinc-400 transition hover:text-white"
                         aria-label={`Edit ${question.title}`}
                       >

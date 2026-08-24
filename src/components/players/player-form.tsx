@@ -8,7 +8,7 @@ import { ArrowLeft, ChevronDown, Plus, Trash2 } from "lucide-react";
 import { ErrorText } from "@/components/form/error-text";
 import { CreateFieldModal } from "@/components/players/create-field-modal";
 import { ConfirmDeleteModal, openConfirm } from "@/components/ui/confirm-delete-modal";
-import { COUNTRIES, FORMAT_LABELS, FORMATS, ROLES } from "@/data/cricket";
+import { COUNTRIES, customFieldRoleLabel, FORMAT_LABELS, FORMATS, ROLES } from "@/data/cricket";
 import { api, ApiError, uploadPlayerPhoto } from "@/lib/api";
 import type { FormatKey, FormatStats, Player, PlayerCustomField } from "@/lib/players";
 import {
@@ -170,6 +170,8 @@ export function PlayerForm({ player }: PlayerFormProps) {
 
   const battingCustom = customFields.filter((item) => item.applies_to === "batter");
   const bowlingCustom = customFields.filter((item) => item.applies_to === "bowler");
+  const allRounderCustom = customFields.filter((item) => item.applies_to === "all-rounder");
+  const wicketkeeperCustom = customFields.filter((item) => item.applies_to === "wicketkeeper");
 
   function fieldError(name: string): string | undefined {
     if (!getIn(formik.touched, name)) return undefined;
@@ -222,7 +224,7 @@ export function PlayerForm({ player }: PlayerFormProps) {
               key={field.id}
               className="inline-flex items-center gap-1 rounded-full border border-purple/30 bg-purple/10 py-1 pl-3 pr-1 text-xs font-medium text-purple-100"
             >
-              {field.name} · {field.applies_to}
+              {field.name} · {customFieldRoleLabel(field.applies_to)}
               <button
                 type="button"
                 aria-label={`Delete ${field.name}`}
@@ -468,6 +470,40 @@ export function PlayerForm({ player }: PlayerFormProps) {
           </section>
         ) : null}
 
+        {allRounderCustom.length > 0 ? (
+          <section className="space-y-6">
+            <h2 className="pt-2 text-lg font-semibold text-white">All-rounder fields</h2>
+            {allRounderCustom.map((field) => (
+              <CustomFormatRow
+                key={field.id}
+                field={field}
+                values={formik.values.custom_fields[field.id] ?? { odi: "", t20: "", test: "" }}
+                onChange={(format, value) => {
+                  void formik.setFieldValue(`custom_fields.${field.id}.${format}`, value);
+                }}
+                onDelete={() => openConfirm(setPendingDelete, field)}
+              />
+            ))}
+          </section>
+        ) : null}
+
+        {wicketkeeperCustom.length > 0 ? (
+          <section className="space-y-6">
+            <h2 className="pt-2 text-lg font-semibold text-white">Wicketkeeper fields</h2>
+            {wicketkeeperCustom.map((field) => (
+              <CustomFormatRow
+                key={field.id}
+                field={field}
+                values={formik.values.custom_fields[field.id] ?? { odi: "", t20: "", test: "" }}
+                onChange={(format, value) => {
+                  void formik.setFieldValue(`custom_fields.${field.id}.${format}`, value);
+                }}
+                onDelete={() => openConfirm(setPendingDelete, field)}
+              />
+            ))}
+          </section>
+        ) : null}
+
         <FormatStatRow
           row={MOTM_ROW}
           formats={formats}
@@ -581,11 +617,13 @@ function FormatValueInput({
           value={value}
           onChange={onChange}
           onBlur={onBlur}
-          className="h-full min-w-0 flex-1 appearance-none bg-transparent pr-6 text-sm text-white outline-none"
+          className="h-full min-w-0 flex-1 appearance-none bg-transparent py-0 pl-3 pr-6 text-sm text-white outline-none"
         >
-          <option value="">{placeholder}</option>
+          <option value="" className="bg-[#0c0c10] px-3 py-2 text-white">
+            {placeholder}
+          </option>
           {teamChoices(value).map((team) => (
-            <option key={team} value={team} className="bg-[#0c0c10] text-white">
+            <option key={team} value={team} className="bg-[#0c0c10] px-3 py-2 text-white">
               {team}
             </option>
           ))}

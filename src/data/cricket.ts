@@ -13,6 +13,15 @@ export const COUNTRIES = [
   { name: "Zimbabwe", code: "zw" },
 ] as const;
 
+export const CUSTOM_FIELD_ROLES = [
+  { value: "batter", label: "Batter" },
+  { value: "bowler", label: "Bowler" },
+  { value: "all-rounder", label: "All-rounder" },
+  { value: "wicketkeeper", label: "Wicketkeeper" },
+] as const;
+
+export type CustomFieldAppliesTo = (typeof CUSTOM_FIELD_ROLES)[number]["value"];
+
 export const ROLES = [
   { value: "batsman", label: "Batsman" },
   { value: "bowler", label: "Bowler" },
@@ -34,6 +43,10 @@ export function countryCode(name: string) {
 
 export function flagUrl(name: string) {
   return `https://flagcdn.com/w40/${countryCode(name)}.png`;
+}
+
+export function customFieldRoleLabel(value: string) {
+  return CUSTOM_FIELD_ROLES.find((item) => item.value === value)?.label ?? value;
 }
 
 export function roleLabel(role: string) {

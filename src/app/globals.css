@@ -54,3 +54,7 @@ dialog.app-modal::backdrop {
   background: rgba(7, 6, 13, 0.82);
   backdrop-filter: blur(6px);
 }
+
+select option {
+  padding: 8px 14px;
+}

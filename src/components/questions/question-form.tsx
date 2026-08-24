@@ -2,11 +2,12 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useEffect } from "react";
 import { useFormik } from "formik";
 import { ArrowLeft, ChevronDown } from "lucide-react";
 import { ErrorText } from "@/components/form/error-text";
 import { api, ApiError } from "@/lib/api";
-import type { Category, Question, QuestionType } from "@/lib/questions";
+import { GENERAL_CATEGORY_NAME, type Category, type Question, type QuestionType } from "@/lib/questions";
 import {
   questionInitialValues,
   questionPayloadFromValues,
@@ -16,7 +17,11 @@ import {
 
 const inputClass =
   "w-full rounded-[22px] border bg-[#0c0c10] px-5 py-4 text-sm text-white outline-none placeholder:text-zinc-500 focus:border-purple/50";
+const fieldClass =
+  "h-12 w-full appearance-none rounded-full border bg-[#0c0c10] px-5 text-sm text-white outline-none placeholder:text-zinc-500 focus:border-purple/50";
 const labelClass = "mb-1 block text-sm font-medium text-white";
+const OPTION_KEYS = ["option_1", "option_2", "option_3", "option_4"] as const;
+const OPTION_LABELS = ["A", "B", "C", "D"] as const;
 
 type QuestionFormProps = {
   question?: Question;
@@ -27,12 +32,13 @@ type QuestionFormProps = {
 export function QuestionForm({ question, categories, type = "player" }: QuestionFormProps) {
   const router = useRouter();
   const editing = Boolean(question);
-  const listHref = "/questions/player";
+  const isGeneral = type === "general";
+  const listHref = isGeneral ? "/questions/general" : "/questions/player";
 
   const formik = useFormik<QuestionFormValues>({
     initialValues: questionInitialValues(question),
     enableReinitialize: true,
-    validationSchema: questionSchema,
+    validationSchema: questionSchema(type),
     onSubmit: async (values, helpers) => {
       helpers.setStatus("");
       try {
@@ -55,6 +61,17 @@ export function QuestionForm({ question, categories, type = "player" }: Question
       }
     },
   });
+
+  useEffect(() => {
+    if (!isGeneral || formik.values.category_id) return;
+    const category =
+      categories.find((item) => item.name.toLowerCase() === GENERAL_CATEGORY_NAME.toLowerCase()) ??
+      categories.find((item) => item.name.toLowerCase() === "general knowledge");
+    if (category) {
+      void formik.setFieldValue("category_id", category.id, false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [categories, isGeneral, formik.values.category_id]);
 
   function fieldError(name: keyof QuestionFormValues) {
     return formik.touched[name] ? formik.errors[name] : undefined;
@@ -96,7 +113,11 @@ export function QuestionForm({ question, categories, type = "player" }: Question
               value={formik.values.title}
               onChange={formik.handleChange}
               onBlur={formik.handleBlur}
-              placeholder="e.g. Which of these players has the highest batting average (odi/test/t20) ?"
+              placeholder={
+                isGeneral
+                  ? "e.g. Who won the 2023 ODI World Cup?"
+                  : "e.g. Which of these players has the highest batting average (odi/test/t20) ?"
+              }
               className={`${inputClass} resize-none ${
                 fieldError("title") ? "border-red-500/50" : "border-white/8"
               }`}
@@ -105,31 +126,96 @@ export function QuestionForm({ question, categories, type = "player" }: Question
           </label>
         </div>
 
+        {isGeneral ? (
+          <>
+            <div className="mt-8 grid gap-6 md:grid-cols-2">
+              {OPTION_KEYS.map((name, index) => (
+                <label key={name} className="block">
+                  <span className={labelClass}>
+                    Option {index + 1}<span className="text-red-400">*</span>
+                  </span>
+                  <input
+                    name={name}
+                    value={formik.values[name]}
+                    onChange={formik.handleChange}
+                    onBlur={formik.handleBlur}
+                    placeholder={`Enter option ${index + 1}`}
+                    className={`mt-3 ${fieldClass} ${
+                      fieldError(name) ? "border-red-500/50" : "border-white/8"
+                    }`}
+                  />
+                  <ErrorText message={fieldError(name)} />
+                </label>
+              ))}
+            </div>
+
+            <div className="mt-8">
+              <span className={labelClass}>
+                Correct Option<span className="text-red-400">*</span>
+              </span>
+              <p className="mb-3 text-sm text-zinc-500">Choose which option is the right answer.</p>
+              <div className="relative max-w-xl">
+                <select
+                  name="correct_option"
+                  value={formik.values.correct_option}
+                  onChange={formik.handleChange}
+                  onBlur={formik.handleBlur}
+                  className={`${fieldClass} pr-10 ${
+                    fieldError("correct_option") ? "border-red-500/50" : "border-white/8"
+                  }`}
+                >
+                  <option value="">Select correct option</option>
+                  {OPTION_KEYS.map((name, index) => (
+                    <option key={name} value={String(index + 1)}>
+                      {OPTION_LABELS[index]}. {formik.values[name].trim() || `Option ${index + 1}`}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown className="pointer-events-none absolute right-4 top-1/2 size-4 -translate-y-1/2 text-zinc-500" />
+              </div>
+              <ErrorText message={fieldError("correct_option")} />
+            </div>
+          </>
+        ) : null}
+
         <div className="mt-8">
           <span className={labelClass}>
             Category<span className="text-red-400">*</span>
           </span>
-          <p className="mb-3 text-sm text-zinc-500">Select the category this questions belong to.</p>
-          <div className="relative max-w-xl">
-            <select
-              name="category_id"
-              value={formik.values.category_id}
-              onChange={formik.handleChange}
-              onBlur={formik.handleBlur}
-              className={`h-12 w-full appearance-none rounded-full border bg-[#0c0c10] px-5 pr-10 text-sm text-white outline-none ${
-                fieldError("category_id") ? "border-red-500/50" : "border-white/8"
-              }`}
-            >
-              <option value="">Select Category</option>
-              {categories.map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.name}
-                </option>
-              ))}
-            </select>
-            <ChevronDown className="pointer-events-none absolute right-4 top-1/2 size-4 -translate-y-1/2 text-zinc-500" />
-          </div>
-          <ErrorText message={fieldError("category_id")} />
+          {isGeneral ? (
+            <>
+              <p className="mb-3 text-sm text-zinc-500">
+                All questions in this section are assigned to General Questions.
+              </p>
+              <span className="inline-flex h-12 items-center rounded-full border border-white/8 bg-[#0c0c10] px-5 text-sm text-white">
+                {GENERAL_CATEGORY_NAME}
+              </span>
+            </>
+          ) : (
+            <>
+              <p className="mb-3 text-sm text-zinc-500">Select the category this questions belong to.</p>
+              <div className="relative max-w-xl">
+                <select
+                  name="category_id"
+                  value={formik.values.category_id}
+                  onChange={formik.handleChange}
+                  onBlur={formik.handleBlur}
+                  className={`${fieldClass} pr-10 ${
+                    fieldError("category_id") ? "border-red-500/50" : "border-white/8"
+                  }`}
+                >
+                  <option value="">Select Category</option>
+                  {categories.map((item) => (
+                    <option key={item.id} value={item.id}>
+                      {item.name}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown className="pointer-events-none absolute right-4 top-1/2 size-4 -translate-y-1/2 text-zinc-500" />
+              </div>
+              <ErrorText message={fieldError("category_id")} />
+            </>
+          )}
         </div>
 
         <div className="mt-8">

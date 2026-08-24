@@ -1,3 +1,5 @@
+import type { CustomFieldAppliesTo } from "@/data/cricket";
+
 export type FormatKey = "odi" | "t20" | "test";
 
 export type FormatStats = {
@@ -44,7 +46,7 @@ export type Player = {
 export type PlayerCustomField = {
   id: string;
   name: string;
-  applies_to: "batter" | "bowler";
+  applies_to: CustomFieldAppliesTo;
 };
 
 export type PlayerCustomFieldValue = {

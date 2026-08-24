@@ -7,18 +7,21 @@ import * as Yup from "yup";
 import { ErrorText } from "@/components/form/error-text";
 import { api, ApiError } from "@/lib/api";
 import type { PlayerCustomField } from "@/lib/players";
+import { CUSTOM_FIELD_ROLES, type CustomFieldAppliesTo } from "@/data/cricket";
 
 const inputClass =
   "h-12 w-full rounded-full border bg-[#0c0c10] px-5 text-sm text-white outline-none placeholder:text-zinc-500 focus:border-purple/50";
 
 type Values = {
   name: string;
-  applies_to: "batter" | "bowler" | "";
+  applies_to: CustomFieldAppliesTo | "";
 };
 
 const schema = Yup.object({
   name: Yup.string().trim().required("Field name is required").min(2, "Enter at least 2 characters").max(120, "Must be 120 characters or fewer"),
-  applies_to: Yup.string().oneOf(["batter", "bowler"], "Select batter or bowler").required("Select batter or bowler"),
+  applies_to: Yup.string()
+    .oneOf(["batter", "bowler", "all-rounder", "wicketkeeper"], "Select who this field applies to")
+    .required("Select who this field applies to"),
 });
 
 type CreateFieldModalProps = {
@@ -102,7 +105,9 @@ export function CreateFieldModal({ open, onClose, onCreated }: CreateFieldModalP
         <h2 id={titleId} className="text-[28px] font-semibold tracking-tight text-white">
           Create New Field
         </h2>
-        <p className="mt-1 text-sm text-zinc-500">Add a custom statistic for batters or bowlers. Existing players stay empty until filled in.</p>
+        <p className="mt-1 text-sm text-zinc-500">
+          Add a custom statistic for batters, bowlers, all-rounders, or wicketkeepers. Existing players stay empty until filled in.
+        </p>
 
         {formik.status ? (
           <p className="mt-4 rounded-2xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">
@@ -131,18 +136,18 @@ export function CreateFieldModal({ open, onClose, onCreated }: CreateFieldModalP
             Associate with<span className="text-red-400">*</span>
           </legend>
           <div className="grid grid-cols-2 gap-3">
-            {(["batter", "bowler"] as const).map((option) => (
+            {CUSTOM_FIELD_ROLES.map((option) => (
               <button
-                key={option}
+                key={option.value}
                 type="button"
-                onClick={() => formik.setFieldValue("applies_to", option)}
-                className={`rounded-[22px] border px-4 py-4 text-left text-sm font-medium capitalize transition ${
-                  formik.values.applies_to === option
+                onClick={() => formik.setFieldValue("applies_to", option.value)}
+                className={`rounded-[22px] border px-4 py-4 text-left text-sm font-medium transition ${
+                  formik.values.applies_to === option.value
                     ? "border-purple bg-purple/10 text-white"
                     : "border-white/8 bg-[#0c0c10] text-zinc-300"
                 }`}
               >
-                {option}
+                {option.label}
               </button>
             ))}
           </div>

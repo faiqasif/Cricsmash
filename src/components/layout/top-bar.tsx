@@ -16,11 +16,16 @@ function breadcrumbsFor(pathname: string): { parent: string; current: string; pa
   if (pathname.startsWith("/players/") && pathname.endsWith("/edit")) {
     return { parent: "Players", current: "Edit player", parentHref: "/players" };
   }
-  if (pathname === "/questions/player/new") {
-    return { parent: "Question", current: "Add a new question", parentHref: "/questions/player" };
+  if (pathname === "/questions/player/new" || pathname === "/questions/general/new") {
+    const parentHref = pathname.startsWith("/questions/general") ? "/questions/general" : "/questions/player";
+    return { parent: "Question", current: "Add a new question", parentHref };
   }
-  if (pathname.startsWith("/questions/player/") && pathname.endsWith("/edit")) {
-    return { parent: "Question", current: "Edit question", parentHref: "/questions/player" };
+  if (
+    (pathname.startsWith("/questions/player/") || pathname.startsWith("/questions/general/")) &&
+    pathname.endsWith("/edit")
+  ) {
+    const parentHref = pathname.startsWith("/questions/general") ? "/questions/general" : "/questions/player";
+    return { parent: "Question", current: "Edit question", parentHref };
   }
   if (pathname.startsWith("/users/") && pathname !== "/users") {
     return { parent: "User Management", current: "User details", parentHref: "/users" };
@@ -55,7 +60,7 @@ function breadcrumbsFor(pathname: string): { parent: string; current: string; pa
 export function TopBar({ onMenuClick }: TopBarProps) {
   const pathname = usePathname();
 
-  if (pathname === "/players" || pathname === "/questions/player" || pathname === "/categories") {
+  if (pathname === "/players" || pathname === "/questions/player" || pathname === "/questions/general" || pathname === "/categories") {
     return null;
   }
 
