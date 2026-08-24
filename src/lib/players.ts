@@ -36,8 +36,22 @@ export type Player = {
   odi: FormatStats;
   t20: FormatStats;
   test: FormatStats;
+  custom_fields: PlayerCustomFieldValue[];
   created_at: string;
   updated_at: string;
+};
+
+export type PlayerCustomField = {
+  id: string;
+  name: string;
+  applies_to: "batter" | "bowler";
+};
+
+export type PlayerCustomFieldValue = {
+  field_id: string;
+  odi: string | null;
+  t20: string | null;
+  test: string | null;
 };
 
 export type PlayerListItem = {
@@ -72,4 +86,5 @@ export type PlayerPayload = {
   odi?: FormatStats;
   t20?: FormatStats;
   test?: FormatStats;
+  custom_fields?: PlayerCustomFieldValue[];
 };

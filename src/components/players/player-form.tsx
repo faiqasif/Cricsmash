@@ -2,13 +2,15 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { getIn, useFormik } from "formik";
-import { ArrowLeft, ChevronDown } from "lucide-react";
+import { ArrowLeft, ChevronDown, Plus, Trash2 } from "lucide-react";
 import { ErrorText } from "@/components/form/error-text";
+import { CreateFieldModal } from "@/components/players/create-field-modal";
+import { ConfirmDeleteModal, openConfirm } from "@/components/ui/confirm-delete-modal";
 import { COUNTRIES, FORMAT_LABELS, FORMATS, ROLES } from "@/data/cricket";
 import { api, ApiError, uploadPlayerPhoto } from "@/lib/api";
-import type { FormatKey, FormatStats, Player } from "@/lib/players";
+import type { FormatKey, FormatStats, Player, PlayerCustomField } from "@/lib/players";
 import {
   playerInitialValues,
   playerPayloadFromValues,
@@ -24,18 +26,19 @@ const FORMAT_ROWS: {
   label: string;
   placeholder: string;
   group: "common" | "batting" | "bowling";
+  input?: "text" | "team";
 }[] = [
   { key: "debut_year", label: "Debut Year", placeholder: "Add debut year", group: "common" },
-  { key: "debut_team", label: "Debut against which team", placeholder: "Add debut team", group: "common" },
+  { key: "debut_team", label: "Debut against which team", placeholder: "Select team", group: "common", input: "team" },
   { key: "last_match_year", label: "Last match year", placeholder: "Add last match year", group: "common" },
-  { key: "last_match_team", label: "Last match year against which team", placeholder: "Add last match team", group: "common" },
+  { key: "last_match_team", label: "Last match year against which team", placeholder: "Select team", group: "common", input: "team" },
   { key: "matches", label: "Number of matches", placeholder: "Enter number of matches", group: "common" },
   { key: "runs", label: "Number of runs", placeholder: "Enter runs", group: "batting" },
-  { key: "most_hundreds_against", label: "Most number of hundreds scored against which team?", placeholder: "enter team name", group: "batting" },
   { key: "batting_average", label: "Batting average", placeholder: "Enter average", group: "batting" },
   { key: "batting_strike_rate", label: "Batting strike rate", placeholder: "Enter strike rate", group: "batting" },
   { key: "hundreds", label: "Number of hundreds", placeholder: "Enter number of hundreds", group: "batting" },
   { key: "highest_score", label: "Highest score", placeholder: "Enter highest score", group: "batting" },
+  { key: "most_hundreds_against", label: "Most number of hundreds scored against which team?", placeholder: "Select team", group: "batting", input: "team" },
   { key: "sixes", label: "Number of sixes", placeholder: "Enter number of sixes", group: "batting" },
   { key: "wickets", label: "Number of wickets", placeholder: "Enter number of wickets", group: "bowling" },
   { key: "bowling_average", label: "Bowling average", placeholder: "Enter average", group: "bowling" },
@@ -62,6 +65,10 @@ export function PlayerForm({ player }: PlayerFormProps) {
   const router = useRouter();
   const editing = Boolean(player);
   const [photoPreview, setPhotoPreview] = useState(player?.photo_url ?? "");
+  const [customFields, setCustomFields] = useState<PlayerCustomField[]>([]);
+  const [fieldsError, setFieldsError] = useState("");
+  const [fieldModalOpen, setFieldModalOpen] = useState(false);
+  const [pendingDelete, setPendingDelete] = useState<PlayerCustomField | null>(null);
 
   const formik = useFormik<PlayerFormValues>({
     initialValues: playerInitialValues(player),
@@ -106,6 +113,64 @@ export function PlayerForm({ player }: PlayerFormProps) {
     [formik.values.odi, formik.values.t20, formik.values.test],
   );
 
+  async function loadCustomFields() {
+    try {
+      const items = await api<PlayerCustomField[]>("/api/v1/player-fields");
+      setCustomFields(Array.isArray(items) ? items : []);
+      setFieldsError("");
+    } catch (err) {
+      setCustomFields([]);
+      setFieldsError(err instanceof ApiError ? err.message : "Could not load custom fields.");
+    }
+  }
+
+  useEffect(() => {
+    void loadCustomFields();
+  }, []);
+
+  useEffect(() => {
+    const next = { ...formik.values.custom_fields };
+    let changed = false;
+    for (const field of customFields) {
+      if (!next[field.id]) {
+        next[field.id] = { odi: "", t20: "", test: "" };
+        changed = true;
+      }
+    }
+    if (changed) {
+      void formik.setFieldValue("custom_fields", next, false);
+    }
+    // Merge only when the field catalog changes; formik is omitted on purpose.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [customFields]);
+
+  function ensureCustomField(field: PlayerCustomField) {
+    if (!field?.id) {
+      void loadCustomFields();
+      return;
+    }
+    setCustomFields((current) => (current.some((item) => item.id === field.id) ? current : [...current, field]));
+    if (!formik.values.custom_fields[field.id]) {
+      void formik.setFieldValue(
+        `custom_fields.${field.id}`,
+        { odi: "", t20: "", test: "" },
+        false,
+      );
+    }
+  }
+
+  function removeCustomField(field: PlayerCustomField) {
+    setCustomFields((current) => current.filter((item) => item.id !== field.id));
+    if (formik.values.custom_fields[field.id]) {
+      const next = { ...formik.values.custom_fields };
+      delete next[field.id];
+      void formik.setFieldValue("custom_fields", next, false);
+    }
+  }
+
+  const battingCustom = customFields.filter((item) => item.applies_to === "batter");
+  const bowlingCustom = customFields.filter((item) => item.applies_to === "bowler");
+
   function fieldError(name: string): string | undefined {
     if (!getIn(formik.touched, name)) return undefined;
     const error = getIn(formik.errors, name);
@@ -119,6 +184,7 @@ export function PlayerForm({ player }: PlayerFormProps) {
   }
 
   return (
+    <>
     <form onSubmit={formik.handleSubmit} noValidate className="pb-10">
       <Link
         href="/players"
@@ -128,8 +194,47 @@ export function PlayerForm({ player }: PlayerFormProps) {
         Back to players
       </Link>
 
-      <h1 className="text-[32px] font-semibold tracking-tight text-white">{title}</h1>
-      <p className="mt-1 text-sm text-zinc-500">Enter player details & statistics</p>
+      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h1 className="text-[32px] font-semibold tracking-tight text-white">{title}</h1>
+          <p className="mt-1 text-sm text-zinc-500">Enter player details & statistics</p>
+        </div>
+        <button
+          type="button"
+          onClick={() => window.setTimeout(() => setFieldModalOpen(true), 0)}
+          className="inline-flex h-12 shrink-0 items-center justify-center gap-2 rounded-full bg-purple px-6 text-sm font-medium text-white shadow-[0_0_24px_rgba(124,92,255,0.4)]"
+        >
+          <Plus className="size-4" />
+          Create New Field
+        </button>
+      </div>
+
+      {fieldsError ? (
+        <p className="mt-4 rounded-2xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">
+          {fieldsError}
+        </p>
+      ) : null}
+
+      {customFields.length > 0 ? (
+        <div className="mt-4 flex flex-wrap gap-2">
+          {customFields.map((field) => (
+            <span
+              key={field.id}
+              className="inline-flex items-center gap-1 rounded-full border border-purple/30 bg-purple/10 py-1 pl-3 pr-1 text-xs font-medium text-purple-100"
+            >
+              {field.name} · {field.applies_to}
+              <button
+                type="button"
+                aria-label={`Delete ${field.name}`}
+                onClick={() => openConfirm(setPendingDelete, field)}
+                className="flex size-6 items-center justify-center rounded-full text-purple-100/80 transition hover:bg-red-500/20 hover:text-red-300"
+              >
+                <Trash2 className="size-3" />
+              </button>
+            </span>
+          ))}
+        </div>
+      ) : null}
 
       {formik.status ? (
         <p className="mt-4 rounded-2xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">
@@ -299,35 +404,65 @@ export function PlayerForm({ player }: PlayerFormProps) {
           </p>
         ) : null}
 
-        {battingVisible ? (
+        {battingVisible || battingCustom.length > 0 ? (
           <section className="space-y-6">
-            <h2 className="pt-2 text-lg font-semibold text-white">Batting statistics</h2>
-            {BATTING_ROWS.map((row) => (
-              <FormatStatRow
-                key={row.key}
-                row={row}
-                formats={formats}
-                errors={formik.errors}
-                touched={formik.touched}
-                onChange={formik.handleChange}
-                onBlur={formik.handleBlur}
+            <h2 className="pt-2 text-lg font-semibold text-white">
+              {battingVisible ? "Batting statistics" : "Batter fields"}
+            </h2>
+            {battingVisible
+              ? BATTING_ROWS.map((row) => (
+                  <FormatStatRow
+                    key={row.key}
+                    row={row}
+                    formats={formats}
+                    errors={formik.errors}
+                    touched={formik.touched}
+                    onChange={formik.handleChange}
+                    onBlur={formik.handleBlur}
+                  />
+                ))
+              : null}
+            {battingCustom.map((field) => (
+              <CustomFormatRow
+                key={field.id}
+                field={field}
+                values={formik.values.custom_fields[field.id] ?? { odi: "", t20: "", test: "" }}
+                onChange={(format, value) => {
+                  void formik.setFieldValue(`custom_fields.${field.id}.${format}`, value);
+                }}
+                onDelete={() => openConfirm(setPendingDelete, field)}
               />
             ))}
           </section>
         ) : null}
 
-        {bowlingVisible ? (
+        {bowlingVisible || bowlingCustom.length > 0 ? (
           <section className="space-y-6">
-            <h2 className="pt-2 text-lg font-semibold text-white">Bowling statistics</h2>
-            {BOWLING_ROWS.map((row) => (
-              <FormatStatRow
-                key={row.key}
-                row={row}
-                formats={formats}
-                errors={formik.errors}
-                touched={formik.touched}
-                onChange={formik.handleChange}
-                onBlur={formik.handleBlur}
+            <h2 className="pt-2 text-lg font-semibold text-white">
+              {bowlingVisible ? "Bowling statistics" : "Bowler fields"}
+            </h2>
+            {bowlingVisible
+              ? BOWLING_ROWS.map((row) => (
+                  <FormatStatRow
+                    key={row.key}
+                    row={row}
+                    formats={formats}
+                    errors={formik.errors}
+                    touched={formik.touched}
+                    onChange={formik.handleChange}
+                    onBlur={formik.handleBlur}
+                  />
+                ))
+              : null}
+            {bowlingCustom.map((field) => (
+              <CustomFormatRow
+                key={field.id}
+                field={field}
+                values={formik.values.custom_fields[field.id] ?? { odi: "", t20: "", test: "" }}
+                onChange={(format, value) => {
+                  void formik.setFieldValue(`custom_fields.${field.id}.${format}`, value);
+                }}
+                onDelete={() => openConfirm(setPendingDelete, field)}
               />
             ))}
           </section>
@@ -381,11 +516,95 @@ export function PlayerForm({ player }: PlayerFormProps) {
         </button>
       </div>
     </form>
+    {fieldModalOpen ? (
+      <CreateFieldModal
+        open
+        onClose={() => setFieldModalOpen(false)}
+        onCreated={ensureCustomField}
+      />
+    ) : null}
+    <ConfirmDeleteModal
+      open={Boolean(pendingDelete)}
+      title="Delete custom field?"
+      description={
+        pendingDelete
+          ? `“${pendingDelete.name}” will be removed from all players. Any saved values for this field will be deleted.`
+          : ""
+      }
+      onClose={() => setPendingDelete(null)}
+      onConfirm={async () => {
+        if (!pendingDelete) return;
+        await api(`/api/v1/player-fields/${pendingDelete.id}`, { method: "DELETE" });
+        removeCustomField(pendingDelete);
+      }}
+    />
+    </>
   );
 }
 
 function inputClassName(error?: string) {
   return `${inputClass} ${error ? "border-red-500/50" : "border-white/8"}`;
+}
+
+function looksLikeTeamField(name: string) {
+  return /\bteams?\b/i.test(name);
+}
+
+function teamChoices(current: string) {
+  const teams: string[] = COUNTRIES.map((item) => item.name);
+  if (current.trim() && !teams.includes(current)) {
+    return [current, ...teams];
+  }
+  return teams;
+}
+
+function FormatValueInput({
+  name,
+  value,
+  placeholder,
+  input,
+  onChange,
+  onBlur,
+}: {
+  name?: string;
+  value: string;
+  placeholder: string;
+  input: "text" | "team";
+  onChange: React.ChangeEventHandler<HTMLInputElement | HTMLSelectElement>;
+  onBlur?: React.FocusEventHandler<HTMLInputElement | HTMLSelectElement>;
+}) {
+  if (input === "team") {
+    return (
+      <span className="relative flex min-w-0 flex-1 items-center">
+        <select
+          name={name}
+          value={value}
+          onChange={onChange}
+          onBlur={onBlur}
+          className="h-full min-w-0 flex-1 appearance-none bg-transparent pr-6 text-sm text-white outline-none"
+        >
+          <option value="">{placeholder}</option>
+          {teamChoices(value).map((team) => (
+            <option key={team} value={team} className="bg-[#0c0c10] text-white">
+              {team}
+            </option>
+          ))}
+        </select>
+        <ChevronDown className="pointer-events-none size-4 shrink-0 text-zinc-500" />
+      </span>
+    );
+  }
+
+  return (
+    <input
+      name={name}
+      className="min-w-0 flex-1 bg-transparent text-sm text-white outline-none placeholder:text-zinc-500"
+      value={value}
+      onChange={onChange}
+      onBlur={onBlur}
+      placeholder={placeholder}
+    />
+  );
 }
 
 function FormatStatRow({
@@ -400,8 +619,8 @@ function FormatStatRow({
   formats: Record<FormatKey, FormFormat>;
   errors: unknown;
   touched: unknown;
-  onChange: React.ChangeEventHandler<HTMLInputElement>;
-  onBlur: React.FocusEventHandler<HTMLInputElement>;
+  onChange: React.ChangeEventHandler<HTMLInputElement | HTMLSelectElement>;
+  onBlur: React.FocusEventHandler<HTMLInputElement | HTMLSelectElement>;
 }) {
   return (
     <div>
@@ -418,19 +637,63 @@ function FormatStatRow({
                   {FORMAT_LABELS[format]}
                 </span>
                 <span className="mx-3 h-5 w-px bg-white/15" />
-                <input
+                <FormatValueInput
                   name={name}
-                  className="min-w-0 flex-1 bg-transparent text-sm text-white outline-none placeholder:text-zinc-500"
                   value={formats[format][row.key]}
+                  placeholder={row.placeholder}
+                  input={row.input ?? "text"}
                   onChange={onChange}
                   onBlur={onBlur}
-                  placeholder={row.placeholder}
                 />
               </label>
               <ErrorText message={error} />
             </div>
           );
         })}
+      </div>
+    </div>
+  );
+}
+
+function CustomFormatRow({
+  field,
+  values,
+  onChange,
+  onDelete,
+}: {
+  field: PlayerCustomField;
+  values: { odi: string; t20: string; test: string };
+  onChange: (format: FormatKey, value: string) => void;
+  onDelete: () => void;
+}) {
+  return (
+    <div>
+      <div className="mb-2 flex items-center justify-between gap-3">
+        <p className="text-sm font-medium text-white">{field.name}</p>
+        <button
+          type="button"
+          aria-label={`Delete ${field.name}`}
+          onClick={onDelete}
+          className="inline-flex size-9 items-center justify-center rounded-full border border-white/10 text-zinc-400 transition hover:border-red-500/40 hover:text-red-400"
+        >
+          <Trash2 className="size-4" />
+        </button>
+      </div>
+      <div className="grid gap-4 md:grid-cols-3">
+        {FORMATS.map((format) => (
+          <div key={format}>
+            <label className="flex h-12 items-center rounded-full border border-white/8 bg-[#0c0c10] px-4">
+              <span className="w-12 shrink-0 text-sm font-semibold text-white">{FORMAT_LABELS[format]}</span>
+              <span className="mx-3 h-5 w-px bg-white/15" />
+              <FormatValueInput
+                value={values[format]}
+                placeholder={looksLikeTeamField(field.name) ? "Select team" : "Leave empty for null"}
+                input={looksLikeTeamField(field.name) ? "team" : "text"}
+                onChange={(e) => onChange(format, e.target.value)}
+              />
+            </label>
+          </div>
+        ))}
       </div>
     </div>
   );

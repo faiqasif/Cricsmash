@@ -17,6 +17,7 @@ export type PlayerFormValues = {
   odi: FormFormat;
   t20: FormFormat;
   test: FormFormat;
+  custom_fields: Record<string, { odi: string; t20: string; test: string }>;
 };
 
 export function showsBatting(role: string) {
@@ -93,7 +94,20 @@ export function playerInitialValues(player?: Player): PlayerFormValues {
     odi: formatFromPlayer(player?.odi),
     t20: formatFromPlayer(player?.t20),
     test: formatFromPlayer(player?.test),
+    custom_fields: customFieldsFromPlayer(player),
   };
+}
+
+function customFieldsFromPlayer(player?: Player): PlayerFormValues["custom_fields"] {
+  const out: PlayerFormValues["custom_fields"] = {};
+  for (const item of player?.custom_fields ?? []) {
+    out[item.field_id] = {
+      odi: item.odi ?? "",
+      t20: item.t20 ?? "",
+      test: item.test ?? "",
+    };
+  }
+  return out;
 }
 
 function optionalWholeNumber(message: string, min = 0, max = 100000) {
@@ -184,6 +198,7 @@ export const playerSchema = Yup.object({
   odi: formatSchema,
   t20: formatSchema,
   test: formatSchema,
+  custom_fields: Yup.object(),
 });
 
 function toNumber(value: string, kind: "int" | "float"): number | null {
@@ -250,6 +265,12 @@ export function playerPayloadFromValues(values: PlayerFormValues, photoUrl: stri
     odi: toFormatPayload(values.odi, battingVisible, bowlingVisible),
     t20: toFormatPayload(values.t20, battingVisible, bowlingVisible),
     test: toFormatPayload(values.test, battingVisible, bowlingVisible),
+    custom_fields: Object.entries(values.custom_fields).map(([fieldId, formats]) => ({
+      field_id: fieldId,
+      odi: formats.odi.trim() || null,
+      t20: formats.t20.trim() || null,
+      test: formats.test.trim() || null,
+    })),
   };
 }
 
