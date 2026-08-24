@@ -8,7 +8,7 @@ import { ArrowLeft, ChevronDown, Plus, Trash2 } from "lucide-react";
 import { ErrorText } from "@/components/form/error-text";
 import { CreateFieldModal } from "@/components/players/create-field-modal";
 import { ConfirmDeleteModal, openConfirm } from "@/components/ui/confirm-delete-modal";
-import { COUNTRIES, customFieldRoleLabel, FORMAT_LABELS, FORMATS, ROLES } from "@/data/cricket";
+import { COUNTRIES, customAppliesToForRole, FORMAT_LABELS, FORMATS, ROLES } from "@/data/cricket";
 import { api, ApiError, uploadPlayerPhoto } from "@/lib/api";
 import type { FormatKey, FormatStats, Player, PlayerCustomField } from "@/lib/players";
 import {
@@ -168,10 +168,15 @@ export function PlayerForm({ player }: PlayerFormProps) {
     }
   }
 
-  const battingCustom = customFields.filter((item) => item.applies_to === "batter");
-  const bowlingCustom = customFields.filter((item) => item.applies_to === "bowler");
-  const allRounderCustom = customFields.filter((item) => item.applies_to === "all-rounder");
-  const wicketkeeperCustom = customFields.filter((item) => item.applies_to === "wicketkeeper");
+  const roleAppliesTo = customAppliesToForRole(formik.values.role);
+  const battingCustom = customFields.filter((item) => item.applies_to === "batter" && roleAppliesTo === "batter");
+  const bowlingCustom = customFields.filter((item) => item.applies_to === "bowler" && roleAppliesTo === "bowler");
+  const allRounderCustom = customFields.filter(
+    (item) => item.applies_to === "all-rounder" && roleAppliesTo === "all-rounder",
+  );
+  const wicketkeeperCustom = customFields.filter(
+    (item) => item.applies_to === "wicketkeeper" && roleAppliesTo === "wicketkeeper",
+  );
 
   function fieldError(name: string): string | undefined {
     if (!getIn(formik.touched, name)) return undefined;
@@ -215,27 +220,6 @@ export function PlayerForm({ player }: PlayerFormProps) {
         <p className="mt-4 rounded-2xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">
           {fieldsError}
         </p>
-      ) : null}
-
-      {customFields.length > 0 ? (
-        <div className="mt-4 flex flex-wrap gap-2">
-          {customFields.map((field) => (
-            <span
-              key={field.id}
-              className="inline-flex items-center gap-1 rounded-full border border-purple/30 bg-purple/10 py-1 pl-3 pr-1 text-xs font-medium text-purple-100"
-            >
-              {field.name} · {customFieldRoleLabel(field.applies_to)}
-              <button
-                type="button"
-                aria-label={`Delete ${field.name}`}
-                onClick={() => openConfirm(setPendingDelete, field)}
-                className="flex size-6 items-center justify-center rounded-full text-purple-100/80 transition hover:bg-red-500/20 hover:text-red-300"
-              >
-                <Trash2 className="size-3" />
-              </button>
-            </span>
-          ))}
-        </div>
       ) : null}
 
       {formik.status ? (
@@ -402,28 +386,24 @@ export function PlayerForm({ player }: PlayerFormProps) {
 
         {!formik.values.role ? (
           <p className="rounded-2xl border border-purple/30 bg-purple/10 px-4 py-3 text-sm text-purple-100">
-            Select a playing role to show batting or bowling fields.
+            Select a playing role to show batting, bowling, and related custom fields.
           </p>
         ) : null}
 
-        {battingVisible || battingCustom.length > 0 ? (
+        {battingVisible ? (
           <section className="space-y-6">
-            <h2 className="pt-2 text-lg font-semibold text-white">
-              {battingVisible ? "Batting statistics" : "Batter fields"}
-            </h2>
-            {battingVisible
-              ? BATTING_ROWS.map((row) => (
-                  <FormatStatRow
-                    key={row.key}
-                    row={row}
-                    formats={formats}
-                    errors={formik.errors}
-                    touched={formik.touched}
-                    onChange={formik.handleChange}
-                    onBlur={formik.handleBlur}
-                  />
-                ))
-              : null}
+            <h2 className="pt-2 text-lg font-semibold text-white">Batting statistics</h2>
+            {BATTING_ROWS.map((row) => (
+              <FormatStatRow
+                key={row.key}
+                row={row}
+                formats={formats}
+                errors={formik.errors}
+                touched={formik.touched}
+                onChange={formik.handleChange}
+                onBlur={formik.handleBlur}
+              />
+            ))}
             {battingCustom.map((field) => (
               <CustomFormatRow
                 key={field.id}
@@ -438,24 +418,20 @@ export function PlayerForm({ player }: PlayerFormProps) {
           </section>
         ) : null}
 
-        {bowlingVisible || bowlingCustom.length > 0 ? (
+        {bowlingVisible ? (
           <section className="space-y-6">
-            <h2 className="pt-2 text-lg font-semibold text-white">
-              {bowlingVisible ? "Bowling statistics" : "Bowler fields"}
-            </h2>
-            {bowlingVisible
-              ? BOWLING_ROWS.map((row) => (
-                  <FormatStatRow
-                    key={row.key}
-                    row={row}
-                    formats={formats}
-                    errors={formik.errors}
-                    touched={formik.touched}
-                    onChange={formik.handleChange}
-                    onBlur={formik.handleBlur}
-                  />
-                ))
-              : null}
+            <h2 className="pt-2 text-lg font-semibold text-white">Bowling statistics</h2>
+            {BOWLING_ROWS.map((row) => (
+              <FormatStatRow
+                key={row.key}
+                row={row}
+                formats={formats}
+                errors={formik.errors}
+                touched={formik.touched}
+                onChange={formik.handleChange}
+                onBlur={formik.handleBlur}
+              />
+            ))}
             {bowlingCustom.map((field) => (
               <CustomFormatRow
                 key={field.id}

@@ -15,9 +15,10 @@ export default function GeneralQuestionsPage() {
   const [pageSize] = useState(5);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
-  const [status, setStatus] = useState("");
+  const [used, setUsed] = useState("");
   const [error, setError] = useState("");
   const [pendingDelete, setPendingDelete] = useState<Question | null>(null);
+  const [togglingUsedId, setTogglingUsedId] = useState<string | null>(null);
 
   useEffect(() => {
     api<CategoryListResponse>("/api/v1/categories?page_size=50")
@@ -25,8 +26,8 @@ export default function GeneralQuestionsPage() {
       .catch(() => setCategories([]));
   }, []);
 
-  const load = useCallback(async () => {
-    setLoading(true);
+  const load = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
     setError("");
     try {
       const params = new URLSearchParams();
@@ -34,7 +35,7 @@ export default function GeneralQuestionsPage() {
       params.set("page", String(page));
       params.set("page_size", String(pageSize));
       if (query.trim()) params.set("q", query.trim());
-      if (status) params.set("status", status);
+      if (used) params.set("used", used);
       const data = await api<QuestionListResponse>(`/api/v1/questions?${params.toString()}`);
       if (data.total_pages > 0 && page > data.total_pages) {
         setPage(data.total_pages);
@@ -49,9 +50,9 @@ export default function GeneralQuestionsPage() {
       setTotal(0);
       setTotalPages(0);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
-  }, [query, status, page, pageSize]);
+  }, [query, used, page, pageSize]);
 
   useEffect(() => {
     const timeout = setTimeout(() => {
@@ -73,24 +74,43 @@ export default function GeneralQuestionsPage() {
         total={total}
         loading={loading}
         query={query}
-        status={status}
+        status=""
+        used={used}
         categoryId=""
         page={page}
         pageSize={pageSize}
         totalPages={totalPages}
         basePath="/questions/general"
         showCategoryFilter={false}
+        showUsed
         onQueryChange={(value) => {
           setQuery(value);
           setPage(1);
         }}
-        onStatusChange={(value) => {
-          setStatus(value);
+        onStatusChange={() => undefined}
+        onUsedChange={(value) => {
+          setUsed(value);
           setPage(1);
         }}
         onCategoryChange={() => undefined}
         onPageChange={setPage}
         onDelete={(question) => openConfirm(setPendingDelete, question)}
+        onToggleUsed={async (question) => {
+          setTogglingUsedId(question.id);
+          setError("");
+          try {
+            await api(`/api/v1/questions/${question.id}/used`, {
+              method: "PATCH",
+              body: JSON.stringify({ used: !question.used }),
+            });
+            await load(true);
+          } catch {
+            setError("Could not update Used. Make sure the Go API is running on port 8080.");
+          } finally {
+            setTogglingUsedId(null);
+          }
+        }}
+        togglingUsedId={togglingUsedId}
       />
       <ConfirmDeleteModal
         open={Boolean(pendingDelete)}

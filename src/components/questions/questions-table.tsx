@@ -23,11 +23,16 @@ type QuestionsTableProps = {
   totalPages: number;
   onQueryChange: (value: string) => void;
   onStatusChange: (value: string) => void;
+  onUsedChange?: (value: string) => void;
   onCategoryChange: (value: string) => void;
   onPageChange: (page: number) => void;
   onDelete: (question: Question) => void;
+  onToggleUsed?: (question: Question) => void;
+  togglingUsedId?: string | null;
   basePath?: string;
   showCategoryFilter?: boolean;
+  showUsed?: boolean;
+  used?: string;
 };
 
 export function QuestionsTable({
@@ -43,16 +48,22 @@ export function QuestionsTable({
   totalPages,
   onQueryChange,
   onStatusChange,
+  onUsedChange,
   onCategoryChange,
   onPageChange,
   onDelete,
+  onToggleUsed,
+  togglingUsedId = null,
   basePath = "/questions/player",
   showCategoryFilter = true,
+  showUsed = false,
+  used = "",
 }: QuestionsTableProps) {
   const empty = !loading && questions.length === 0;
   const from = total === 0 ? 0 : (page - 1) * pageSize + 1;
   const to = Math.min(page * pageSize, total);
   const openMenu = useOpenMenu();
+  const colSpan = 4 + (showCategoryFilter ? 1 : 0);
 
   return (
     <div>
@@ -89,10 +100,17 @@ export function QuestionsTable({
           />
         </label>
 
-        <FilterSelect value={status} onChange={onStatusChange} placeholder="All Status">
-          <option value="active">Active</option>
-          <option value="inactive">Inactive</option>
-        </FilterSelect>
+        {showUsed ? (
+          <FilterSelect value={used} onChange={onUsedChange ?? (() => undefined)} placeholder="Used">
+            <option value="yes">Yes</option>
+            <option value="no">No</option>
+          </FilterSelect>
+        ) : (
+          <FilterSelect value={status} onChange={onStatusChange} placeholder="All Status">
+            <option value="active">Active</option>
+            <option value="inactive">Inactive</option>
+          </FilterSelect>
+        )}
 
         {showCategoryFilter ? (
           <FilterSelect value={categoryId} onChange={onCategoryChange} placeholder="All Categories">
@@ -119,21 +137,32 @@ export function QuestionsTable({
             <tr className="bg-[#16122A] text-xs font-medium uppercase tracking-wide text-zinc-400">
               <th className="px-5 py-4 font-medium">#</th>
               <th className="px-5 py-4 font-medium">Question Title</th>
-              <th className="px-5 py-4 font-medium">Category</th>
-              <th className="px-5 py-4 font-medium">Status</th>
+              {showCategoryFilter ? <th className="px-5 py-4 font-medium">Category</th> : null}
+              <th className="px-5 py-4 font-medium">
+                {showUsed ? (
+                  <div>
+                    <span>Used</span>
+                    <p className="mt-1 text-[11px] font-normal normal-case tracking-normal text-zinc-500">
+                      Click Yes/No to toggle
+                    </p>
+                  </div>
+                ) : (
+                  "Status"
+                )}
+              </th>
               <th className="px-5 py-4 font-medium">Actions</th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={5} className="px-5 py-12 text-center text-sm text-zinc-500">
+                <td colSpan={colSpan} className="px-5 py-12 text-center text-sm text-zinc-500">
                   Loading questions...
                 </td>
               </tr>
             ) : empty ? (
               <tr>
-                <td colSpan={5} className="px-5 py-12 text-center text-sm text-zinc-500">
+                <td colSpan={colSpan} className="px-5 py-12 text-center text-sm text-zinc-500">
                   No questions found.
                 </td>
               </tr>
@@ -144,21 +173,37 @@ export function QuestionsTable({
                     {padIndex((page - 1) * pageSize + index + 1)}
                   </td>
                   <td className="px-5 py-4 text-sm font-medium text-white">{question.title}</td>
+                  {showCategoryFilter ? (
+                    <td className="px-5 py-4">
+                      <span className="inline-flex rounded-full bg-purple/15 px-3 py-1 text-xs font-medium text-purple">
+                        {question.category_name}
+                      </span>
+                    </td>
+                  ) : null}
                   <td className="px-5 py-4">
-                    <span className="inline-flex rounded-full bg-purple/15 px-3 py-1 text-xs font-medium text-purple">
-                      {question.category_name}
-                    </span>
-                  </td>
-                  <td className="px-5 py-4">
-                    <span
-                      className={`inline-flex rounded-full px-3 py-1 text-xs font-medium ${
-                        question.status === "active"
-                          ? "bg-green/15 text-green"
-                          : "bg-zinc-700/80 text-zinc-300"
-                      }`}
-                    >
-                      {question.status === "active" ? "Active" : "Inactive"}
-                    </span>
+                    {showUsed ? (
+                      <button
+                        type="button"
+                        disabled={Boolean(onToggleUsed) && togglingUsedId === question.id}
+                        onClick={() => onToggleUsed?.(question)}
+                        className={`inline-flex rounded-full px-3 py-1 text-xs font-medium transition disabled:opacity-50 ${
+                          question.used ? "bg-green/15 text-green" : "bg-red-500/15 text-red-400"
+                        } ${onToggleUsed ? "cursor-pointer hover:opacity-80" : "cursor-default"}`}
+                        aria-label={`Mark ${question.title} as ${question.used ? "not used" : "used"}`}
+                      >
+                        {question.used ? "Yes" : "No"}
+                      </button>
+                    ) : (
+                      <span
+                        className={`inline-flex rounded-full px-3 py-1 text-xs font-medium ${
+                          question.status === "active"
+                            ? "bg-green/15 text-green"
+                            : "bg-zinc-700/80 text-zinc-300"
+                        }`}
+                      >
+                        {question.status === "active" ? "Active" : "Inactive"}
+                      </span>
+                    )}
                   </td>
                   <td className="px-5 py-4">
                     <div className="flex items-center gap-3">

@@ -49,6 +49,21 @@ export function customFieldRoleLabel(value: string) {
   return CUSTOM_FIELD_ROLES.find((item) => item.value === value)?.label ?? value;
 }
 
+export function customAppliesToForRole(role: string): CustomFieldAppliesTo | null {
+  switch (role.trim().toLowerCase()) {
+    case "batsman":
+      return "batter";
+    case "bowler":
+      return "bowler";
+    case "all-rounder":
+      return "all-rounder";
+    case "wicketkeeper":
+      return "wicketkeeper";
+    default:
+      return null;
+  }
+}
+
 export function roleLabel(role: string) {
   return ROLES.find((item) => item.value === role)?.label ?? role;
 }

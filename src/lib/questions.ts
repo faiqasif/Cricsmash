@@ -36,6 +36,8 @@ export type Question = {
   option_3: string | null;
   option_4: string | null;
   correct_option: number | null;
+  used: boolean;
+  last_used_on: string | null;
   created_at: string;
   updated_at: string;
 };
