@@ -1,3 +1,5 @@
+import { api } from "@/lib/api";
+
 export type QuestionType = "player" | "general" | "tournament" | "image";
 export type QuestionStatus = "active" | "inactive";
 
@@ -22,6 +24,17 @@ export type CategoryPayload = {
 };
 
 export const GENERAL_CATEGORY_NAME = "General Questions";
+
+export async function fetchAllCategories(): Promise<Category[]> {
+  const pageSize = 50;
+  const first = await api<CategoryListResponse>(`/api/v1/categories?page=1&page_size=${pageSize}`);
+  const items = [...first.items];
+  for (let page = 2; page <= first.total_pages; page += 1) {
+    const next = await api<CategoryListResponse>(`/api/v1/categories?page=${page}&page_size=${pageSize}`);
+    items.push(...next.items);
+  }
+  return items.sort((a, b) => a.name.localeCompare(b.name));
+}
 
 export type Question = {
   id: string;

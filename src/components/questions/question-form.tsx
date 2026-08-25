@@ -33,7 +33,8 @@ export function QuestionForm({ question, categories, type = "player" }: Question
   const router = useRouter();
   const editing = Boolean(question);
   const isGeneral = type === "general";
-  const listHref = isGeneral ? "/questions/general" : "/questions/player";
+  const listHref =
+    type === "general" ? "/questions/general" : type === "tournament" ? "/questions/tournament" : "/questions/player";
 
   const formik = useFormik<QuestionFormValues>({
     initialValues: questionInitialValues(question),
@@ -116,7 +117,9 @@ export function QuestionForm({ question, categories, type = "player" }: Question
               placeholder={
                 isGeneral
                   ? "e.g. Who won the 2023 ODI World Cup?"
-                  : "e.g. Which of these players has the highest batting average (odi/test/t20) ?"
+                  : type === "tournament"
+                    ? "e.g. Which team scored the most runs in the tournament?"
+                    : "e.g. Which of these players has the highest batting average (odi/test/t20) ?"
               }
               className={`${inputClass} resize-none ${
                 fieldError("title") ? "border-red-500/50" : "border-white/8"
