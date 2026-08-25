@@ -123,6 +123,9 @@ export function TournamentForm({ templates, tournament }: TournamentFormProps) {
                 className={`mt-4 ${inputClass} resize-none border-white/8 text-zinc-200`}
               />
 
+              <p className="mt-4 text-sm text-zinc-500">
+                Enter four options, then select the radio next to the correct answer.
+              </p>
               <div className="mt-5 grid gap-4 md:grid-cols-2">
                 {OPTION_KEYS.map((name, optionIndex) => {
                   const fieldName = `answers.${index}.${name}`;
