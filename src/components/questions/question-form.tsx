@@ -130,55 +130,57 @@ export function QuestionForm({ question, categories, type = "player" }: Question
         </div>
 
         {isGeneral ? (
-          <>
-            <div className="mt-8 grid gap-6 md:grid-cols-2">
-              {OPTION_KEYS.map((name, index) => (
-                <label key={name} className="block">
-                  <span className={labelClass}>
-                    Option {index + 1}<span className="text-red-400">*</span>
-                  </span>
-                  <input
-                    name={name}
-                    value={formik.values[name]}
-                    onChange={formik.handleChange}
-                    onBlur={formik.handleBlur}
-                    placeholder={`Enter option ${index + 1}`}
-                    className={`mt-3 ${fieldClass} ${
-                      fieldError(name) ? "border-red-500/50" : "border-white/8"
-                    }`}
-                  />
-                  <ErrorText message={fieldError(name)} />
-                </label>
-              ))}
+          <div className="mt-8">
+            <span className={labelClass}>
+              Answer Options<span className="text-red-400">*</span>
+            </span>
+            <p className="mb-4 text-sm text-zinc-500">
+              Enter four options, then select the radio next to the correct answer.
+            </p>
+            <div className="grid gap-4 md:grid-cols-2">
+              {OPTION_KEYS.map((name, optionIndex) => {
+                const selected = formik.values.correct_option === String(optionIndex + 1);
+                return (
+                  <div key={name}>
+                    <div className="flex items-center gap-3">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          void formik.setFieldValue("correct_option", String(optionIndex + 1));
+                          void formik.setFieldTouched("correct_option", true, false);
+                        }}
+                        className={`flex size-6 shrink-0 items-center justify-center rounded-full border ${
+                          selected ? "border-purple" : "border-zinc-500"
+                        }`}
+                        aria-label={`Mark option ${OPTION_LABELS[optionIndex]} as correct`}
+                      >
+                        {selected ? <span className="size-3 rounded-full bg-purple" /> : null}
+                      </button>
+                      <span className="w-4 shrink-0 text-sm font-medium text-zinc-400">
+                        {OPTION_LABELS[optionIndex]}
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <input
+                          name={name}
+                          value={formik.values[name]}
+                          onChange={formik.handleChange}
+                          onBlur={formik.handleBlur}
+                          placeholder={`Option ${optionIndex + 1}`}
+                          className={`${fieldClass} ${
+                            fieldError(name) ? "border-red-500/50" : "border-white/8"
+                          }`}
+                        />
+                      </div>
+                    </div>
+                    <div className="pl-[52px]">
+                      <ErrorText message={fieldError(name)} />
+                    </div>
+                  </div>
+                );
+              })}
             </div>
-
-            <div className="mt-8">
-              <span className={labelClass}>
-                Correct Option<span className="text-red-400">*</span>
-              </span>
-              <p className="mb-3 text-sm text-zinc-500">Choose which option is the right answer.</p>
-              <div className="relative max-w-xl">
-                <select
-                  name="correct_option"
-                  value={formik.values.correct_option}
-                  onChange={formik.handleChange}
-                  onBlur={formik.handleBlur}
-                  className={`${fieldClass} pr-10 ${
-                    fieldError("correct_option") ? "border-red-500/50" : "border-white/8"
-                  }`}
-                >
-                  <option value="">Select correct option</option>
-                  {OPTION_KEYS.map((name, index) => (
-                    <option key={name} value={String(index + 1)}>
-                      {OPTION_LABELS[index]}. {formik.values[name].trim() || `Option ${index + 1}`}
-                    </option>
-                  ))}
-                </select>
-                <ChevronDown className="pointer-events-none absolute right-4 top-1/2 size-4 -translate-y-1/2 text-zinc-500" />
-              </div>
-              <ErrorText message={fieldError("correct_option")} />
-            </div>
-          </>
+            <ErrorText message={fieldError("correct_option")} />
+          </div>
         ) : null}
 
         <div className="mt-8">

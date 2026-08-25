@@ -19,8 +19,77 @@ export type TournamentFormValues = {
 
 const optionSchema = Yup.string()
   .trim()
-  .required("This option is required")
   .max(200, "Must be 200 characters or fewer");
+
+function answerIsBlank(value: {
+  option_1?: string;
+  option_2?: string;
+  option_3?: string;
+  option_4?: string;
+  correct_option?: string;
+}) {
+  const options = [value.option_1, value.option_2, value.option_3, value.option_4].map(
+    (item) => item?.trim() ?? "",
+  );
+  return options.every((item) => !item) && !String(value.correct_option ?? "").trim();
+}
+
+export const tournamentSchema = Yup.object({
+  name: Yup.string()
+    .trim()
+    .required("Tournament name is required")
+    .min(2, "Enter at least 2 characters")
+    .max(200, "Must be 200 characters or fewer"),
+  answers: Yup.array()
+    .of(
+      Yup.object({
+        question_id: Yup.string().required(),
+        title: Yup.string(),
+        option_1: optionSchema,
+        option_2: optionSchema,
+        option_3: optionSchema,
+        option_4: optionSchema,
+        correct_option: Yup.string(),
+      }).test("optional-or-complete", function (value) {
+        if (!value || answerIsBlank(value)) return true;
+        const options = [value.option_1, value.option_2, value.option_3, value.option_4].map(
+          (item) => item?.trim() ?? "",
+        );
+        for (let i = 0; i < options.length; i += 1) {
+          if (!options[i]) {
+            return this.createError({
+              path: `option_${i + 1}`,
+              message: "This option is required",
+            });
+          }
+        }
+        if (new Set(options.map((item) => item.toLowerCase())).size !== options.length) {
+          return this.createError({ path: "option_4", message: "Each option must be different" });
+        }
+        if (!["1", "2", "3", "4"].includes(value.correct_option ?? "")) {
+          return this.createError({ path: "correct_option", message: "Select the correct option" });
+        }
+        return true;
+      }),
+    )
+    .default([]),
+});
+
+export function tournamentPayloadFromValues(values: TournamentFormValues): TournamentPayload {
+  return {
+    name: values.name.trim(),
+    answers: values.answers
+      .filter((item) => !answerIsBlank(item))
+      .map((item) => ({
+        question_id: item.question_id,
+        option_1: item.option_1.trim(),
+        option_2: item.option_2.trim(),
+        option_3: item.option_3.trim(),
+        option_4: item.option_4.trim(),
+        correct_option: Number.parseInt(item.correct_option, 10),
+      })),
+  };
+}
 
 export function tournamentInitialValues(
   templates: Question[],
@@ -60,48 +129,5 @@ export function tournamentInitialValues(
   return {
     name: tournament?.name ?? "",
     answers,
-  };
-}
-
-export const tournamentSchema = Yup.object({
-  name: Yup.string()
-    .trim()
-    .required("Tournament name is required")
-    .min(2, "Enter at least 2 characters")
-    .max(200, "Must be 200 characters or fewer"),
-  answers: Yup.array()
-    .of(
-      Yup.object({
-        question_id: Yup.string().required(),
-        title: Yup.string(),
-        option_1: optionSchema,
-        option_2: optionSchema,
-        option_3: optionSchema,
-        option_4: optionSchema,
-        correct_option: Yup.string()
-          .oneOf(["1", "2", "3", "4"], "Select the correct option")
-          .required("Select the correct option"),
-      }).test("unique-options", "Each option must be different", function (value) {
-        const options = [value.option_1, value.option_2, value.option_3, value.option_4]
-          .map((item) => item?.trim().toLowerCase())
-          .filter(Boolean);
-        if (new Set(options).size === options.length) return true;
-        return this.createError({ path: "option_4", message: "Each option must be different" });
-      }),
-    )
-    .required(),
-});
-
-export function tournamentPayloadFromValues(values: TournamentFormValues): TournamentPayload {
-  return {
-    name: values.name.trim(),
-    answers: values.answers.map((item) => ({
-      question_id: item.question_id,
-      option_1: item.option_1.trim(),
-      option_2: item.option_2.trim(),
-      option_3: item.option_3.trim(),
-      option_4: item.option_4.trim(),
-      correct_option: Number.parseInt(item.correct_option, 10),
-    })),
   };
 }

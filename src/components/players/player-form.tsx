@@ -8,7 +8,7 @@ import { ArrowLeft, ChevronDown, Plus, Trash2 } from "lucide-react";
 import { ErrorText } from "@/components/form/error-text";
 import { CreateFieldModal } from "@/components/players/create-field-modal";
 import { ConfirmDeleteModal, openConfirm } from "@/components/ui/confirm-delete-modal";
-import { COUNTRIES, customAppliesToForRole, FORMAT_LABELS, FORMATS, ROLES } from "@/data/cricket";
+import { COUNTRIES, customAppliesToForRole, FORMAT_LABELS, FORMATS, ROLES, TEST_COUNTRIES } from "@/data/cricket";
 import { api, ApiError, uploadPlayerPhoto } from "@/lib/api";
 import type { FormatKey, FormatStats, Player, PlayerCustomField } from "@/lib/players";
 import {
@@ -17,41 +17,49 @@ import {
   playerSchema,
   showsBatting,
   showsBowling,
+  showsKeeping,
   type FormFormat,
   type PlayerFormValues,
 } from "@/validation/player";
 
-const FORMAT_ROWS: {
+type FormatRow = {
   key: keyof FormatStats;
   label: string;
   placeholder: string;
-  group: "common" | "batting" | "bowling";
+  group: "common" | "batting" | "bowling" | "keeping";
   input?: "text" | "team";
-}[] = [
+  formats?: readonly FormatKey[];
+};
+
+const FORMAT_ROWS: FormatRow[] = [
   { key: "debut_year", label: "Debut Year", placeholder: "Add debut year", group: "common" },
-  { key: "debut_team", label: "Debut against which team", placeholder: "Select team", group: "common", input: "team" },
-  { key: "last_match_year", label: "Last match year", placeholder: "Add last match year", group: "common" },
-  { key: "last_match_team", label: "Last match year against which team", placeholder: "Select team", group: "common", input: "team" },
+  { key: "debut_team", label: "Debut against which team?", placeholder: "Select team", group: "common", input: "team" },
+  { key: "last_match_year", label: "Last Match Year", placeholder: "Add last match year", group: "common" },
+  { key: "last_match_team", label: "Last Match against which team?", placeholder: "Select team", group: "common", input: "team" },
   { key: "matches", label: "Number of matches", placeholder: "Enter number of matches", group: "common" },
+  { key: "man_of_the_match", label: "Number of Man of the match awards", placeholder: "Enter man of the match awards", group: "common" },
   { key: "runs", label: "Number of runs", placeholder: "Enter runs", group: "batting" },
   { key: "batting_average", label: "Batting average", placeholder: "Enter average", group: "batting" },
-  { key: "batting_strike_rate", label: "Batting strike rate", placeholder: "Enter strike rate", group: "batting" },
+  { key: "batting_strike_rate", label: "Batting Strike rate", placeholder: "Enter strike rate", group: "batting" },
   { key: "hundreds", label: "Number of hundreds", placeholder: "Enter number of hundreds", group: "batting" },
+  { key: "fifties", label: "Number of 50's", placeholder: "Enter number of fifties", group: "batting" },
   { key: "highest_score", label: "Highest score", placeholder: "Enter highest score", group: "batting" },
-  { key: "most_hundreds_against", label: "Most number of hundreds scored against which team?", placeholder: "Select team", group: "batting", input: "team" },
+  { key: "most_hundreds_against", label: "Most number of hundreds against which team?", placeholder: "Select team", group: "batting", input: "team" },
   { key: "sixes", label: "Number of sixes", placeholder: "Enter number of sixes", group: "batting" },
+  { key: "batting_position", label: "Which batting position did he bat the most number of times?", placeholder: "Position 1-11", group: "batting", formats: ["odi", "test"] },
   { key: "wickets", label: "Number of wickets", placeholder: "Enter number of wickets", group: "bowling" },
-  { key: "bowling_average", label: "Bowling average", placeholder: "Enter average", group: "bowling" },
   { key: "bowling_strike_rate", label: "Bowling strike rate", placeholder: "Enter strike rate", group: "bowling" },
-  { key: "wicket_hauls", label: "Number of wickets hauls", placeholder: "Enter number of wickets", group: "bowling" },
-  { key: "best_bowling_figures", label: "Best bowling figures", placeholder: "Enter figures", group: "bowling" },
-  { key: "man_of_the_match", label: "Man of the Match Awards", placeholder: "Enter man of the match awards", group: "common" },
+  { key: "bowling_average", label: "Bowling average", placeholder: "Enter average", group: "bowling" },
+  { key: "wicket_hauls", label: "Number of 5 wicket hauls", placeholder: "Enter number of 5 wicket hauls", group: "bowling" },
+  { key: "catches", label: "Number of catches", placeholder: "Enter number of catches", group: "keeping" },
+  { key: "stumpings", label: "Number of stumpings", placeholder: "Enter number of stumpings", group: "keeping" },
 ];
 
-const COMMON_ROWS = FORMAT_ROWS.filter((row) => row.group === "common" && row.key !== "man_of_the_match");
-const BATTING_ROWS = FORMAT_ROWS.filter((row) => row.group === "batting");
+const COMMON_ROWS = FORMAT_ROWS.filter((row) => row.group === "common");
+const BATTING_ROWS = FORMAT_ROWS.filter((row) => row.group === "batting" && row.key !== "batting_position");
+const BATTING_POSITION_ROW = FORMAT_ROWS.find((row) => row.key === "batting_position")!;
 const BOWLING_ROWS = FORMAT_ROWS.filter((row) => row.group === "bowling");
-const MOTM_ROW = FORMAT_ROWS.find((row) => row.key === "man_of_the_match")!;
+const KEEPING_ROWS = FORMAT_ROWS.filter((row) => row.group === "keeping");
 
 const inputClass =
   "h-12 w-full rounded-full border bg-[#0c0c10] px-5 text-sm text-white outline-none placeholder:text-zinc-500 focus:border-purple/50";
@@ -104,6 +112,7 @@ export function PlayerForm({ player }: PlayerFormProps) {
   const title = editing ? "Edit player" : "Add a new player";
   const battingVisible = showsBatting(formik.values.role);
   const bowlingVisible = showsBowling(formik.values.role);
+  const keepingVisible = showsKeeping(formik.values.role);
   const formats = useMemo(
     () => ({
       odi: formik.values.odi,
@@ -186,8 +195,40 @@ export function PlayerForm({ player }: PlayerFormProps) {
 
   function onRoleChange(next: string) {
     formik.setFieldValue("role", next);
-    if (!showsBowling(next)) formik.setFieldValue("most_dismissed_batter", "");
-    if (!showsBatting(next)) formik.setFieldValue("most_dismissals_against_bowler", "");
+    if (!showsBowling(next)) {
+      void formik.setFieldValue("most_dismissed_batter", "");
+      for (const key of [
+        "wickets_home_test",
+        "wickets_away_test",
+        "wickets_vs_india",
+        "wickets_vs_australia",
+        "wickets_vs_england",
+        "wickets_vs_south_africa",
+        "wickets_in_india",
+        "wickets_in_australia",
+        "wickets_in_england",
+        "wickets_in_south_africa",
+      ] as const) {
+        void formik.setFieldValue(key, "");
+      }
+    }
+    if (!showsBatting(next)) {
+      void formik.setFieldValue("most_dismissals_against_bowler", "");
+      for (const key of [
+        "batting_avg_home_test",
+        "batting_avg_away_test",
+        "batting_avg_in_india_test",
+        "batting_avg_in_australia_test",
+        "batting_avg_in_england_test",
+        "batting_avg_in_south_africa_test",
+        "batting_avg_vs_india_test",
+        "batting_avg_vs_australia_test",
+        "batting_avg_vs_england_test",
+        "batting_avg_vs_south_africa_test",
+      ] as const) {
+        void formik.setFieldValue(key, "");
+      }
+    }
   }
 
   return (
@@ -288,7 +329,7 @@ export function PlayerForm({ player }: PlayerFormProps) {
           ))}
         </SelectField>
         <SelectField
-          label="Role"
+          label="Playing role"
           required
           name="role"
           value={formik.values.role}
@@ -303,7 +344,7 @@ export function PlayerForm({ player }: PlayerFormProps) {
             </option>
           ))}
         </SelectField>
-        <Field label="Number of Tournaments won in International Cricket" error={fieldError("tournaments_won")}>
+        <Field label="Number of International Tournaments won" error={fieldError("tournaments_won")}>
           <input
             name="tournaments_won"
             className={inputClassName(fieldError("tournaments_won"))}
@@ -335,40 +376,6 @@ export function PlayerForm({ player }: PlayerFormProps) {
             placeholder="Enter number of catches"
           />
         </Field>
-      </div>
-
-      <div className="mt-6 space-y-6">
-        {bowlingVisible ? (
-          <Field
-            label="Which batter has he dismissed the most number of times in International cricket"
-            error={fieldError("most_dismissed_batter")}
-          >
-            <input
-              name="most_dismissed_batter"
-              className={inputClassName(fieldError("most_dismissed_batter"))}
-              value={formik.values.most_dismissed_batter}
-              onChange={formik.handleChange}
-              onBlur={formik.handleBlur}
-              placeholder="Enter player name"
-            />
-          </Field>
-        ) : null}
-        {battingVisible ? (
-          <Field
-            label="Most dismissals against which bowler in International cricket"
-            required
-            error={fieldError("most_dismissals_against_bowler")}
-          >
-            <input
-              name="most_dismissals_against_bowler"
-              className={inputClassName(fieldError("most_dismissals_against_bowler"))}
-              value={formik.values.most_dismissals_against_bowler}
-              onChange={formik.handleChange}
-              onBlur={formik.handleBlur}
-              placeholder="Enter player name"
-            />
-          </Field>
-        ) : null}
       </div>
 
       <div className="mt-8 space-y-6">
@@ -404,6 +411,67 @@ export function PlayerForm({ player }: PlayerFormProps) {
                 onBlur={formik.handleBlur}
               />
             ))}
+            <Field
+              label="Most dismissals against which bowler in International cricket?"
+              required
+              error={fieldError("most_dismissals_against_bowler")}
+            >
+              <input
+                name="most_dismissals_against_bowler"
+                className={inputClassName(fieldError("most_dismissals_against_bowler"))}
+                value={formik.values.most_dismissals_against_bowler}
+                onChange={formik.handleChange}
+                onBlur={formik.handleBlur}
+                placeholder="Enter player name"
+              />
+            </Field>
+            <PairFields
+              label="Batting average home vs away in Test cricket"
+              leftName="batting_avg_home_test"
+              rightName="batting_avg_away_test"
+              leftLabel="Home"
+              rightLabel="Away"
+              leftValue={formik.values.batting_avg_home_test}
+              rightValue={formik.values.batting_avg_away_test}
+              leftError={fieldError("batting_avg_home_test")}
+              rightError={fieldError("batting_avg_away_test")}
+              onChange={formik.handleChange}
+              onBlur={formik.handleBlur}
+            />
+            <CountryFields
+              label="Batting average in India, Australia, England, South Africa in Tests"
+              names={{
+                India: "batting_avg_in_india_test",
+                Australia: "batting_avg_in_australia_test",
+                England: "batting_avg_in_england_test",
+                "South Africa": "batting_avg_in_south_africa_test",
+              }}
+              values={formik.values}
+              fieldError={fieldError}
+              onChange={formik.handleChange}
+              onBlur={formik.handleBlur}
+            />
+            <CountryFields
+              label="Batting average vs India, Australia, England, South Africa in Tests"
+              names={{
+                India: "batting_avg_vs_india_test",
+                Australia: "batting_avg_vs_australia_test",
+                England: "batting_avg_vs_england_test",
+                "South Africa": "batting_avg_vs_south_africa_test",
+              }}
+              values={formik.values}
+              fieldError={fieldError}
+              onChange={formik.handleChange}
+              onBlur={formik.handleBlur}
+            />
+            <FormatStatRow
+              row={BATTING_POSITION_ROW}
+              formats={formats}
+              errors={formik.errors}
+              touched={formik.touched}
+              onChange={formik.handleChange}
+              onBlur={formik.handleBlur}
+            />
             {battingCustom.map((field) => (
               <CustomFormatRow
                 key={field.id}
@@ -432,7 +500,87 @@ export function PlayerForm({ player }: PlayerFormProps) {
                 onBlur={formik.handleBlur}
               />
             ))}
+            <Field
+              label="Which batter has he dismissed the most number of times?"
+              error={fieldError("most_dismissed_batter")}
+            >
+              <input
+                name="most_dismissed_batter"
+                className={inputClassName(fieldError("most_dismissed_batter"))}
+                value={formik.values.most_dismissed_batter}
+                onChange={formik.handleChange}
+                onBlur={formik.handleBlur}
+                placeholder="Enter player name"
+              />
+            </Field>
+            <PairFields
+              label="Number of wickets home vs away in Test cricket"
+              leftName="wickets_home_test"
+              rightName="wickets_away_test"
+              leftLabel="Home"
+              rightLabel="Away"
+              leftValue={formik.values.wickets_home_test}
+              rightValue={formik.values.wickets_away_test}
+              leftError={fieldError("wickets_home_test")}
+              rightError={fieldError("wickets_away_test")}
+              onChange={formik.handleChange}
+              onBlur={formik.handleBlur}
+            />
+            <CountryFields
+              label="Number of wickets vs India, Australia, England, South Africa"
+              names={{
+                India: "wickets_vs_india",
+                Australia: "wickets_vs_australia",
+                England: "wickets_vs_england",
+                "South Africa": "wickets_vs_south_africa",
+              }}
+              values={formik.values}
+              fieldError={fieldError}
+              onChange={formik.handleChange}
+              onBlur={formik.handleBlur}
+            />
+            <CountryFields
+              label="Number of wickets in India, Australia, England, South Africa"
+              names={{
+                India: "wickets_in_india",
+                Australia: "wickets_in_australia",
+                England: "wickets_in_england",
+                "South Africa": "wickets_in_south_africa",
+              }}
+              values={formik.values}
+              fieldError={fieldError}
+              onChange={formik.handleChange}
+              onBlur={formik.handleBlur}
+            />
             {bowlingCustom.map((field) => (
+              <CustomFormatRow
+                key={field.id}
+                field={field}
+                values={formik.values.custom_fields[field.id] ?? { odi: "", t20: "", test: "" }}
+                onChange={(format, value) => {
+                  void formik.setFieldValue(`custom_fields.${field.id}.${format}`, value);
+                }}
+                onDelete={() => openConfirm(setPendingDelete, field)}
+              />
+            ))}
+          </section>
+        ) : null}
+
+        {keepingVisible ? (
+          <section className="space-y-6">
+            <h2 className="pt-2 text-lg font-semibold text-white">Wicketkeeping statistics</h2>
+            {KEEPING_ROWS.map((row) => (
+              <FormatStatRow
+                key={row.key}
+                row={row}
+                formats={formats}
+                errors={formik.errors}
+                touched={formik.touched}
+                onChange={formik.handleChange}
+                onBlur={formik.handleBlur}
+              />
+            ))}
+            {wicketkeeperCustom.map((field) => (
               <CustomFormatRow
                 key={field.id}
                 field={field}
@@ -462,32 +610,6 @@ export function PlayerForm({ player }: PlayerFormProps) {
             ))}
           </section>
         ) : null}
-
-        {wicketkeeperCustom.length > 0 ? (
-          <section className="space-y-6">
-            <h2 className="pt-2 text-lg font-semibold text-white">Wicketkeeper fields</h2>
-            {wicketkeeperCustom.map((field) => (
-              <CustomFormatRow
-                key={field.id}
-                field={field}
-                values={formik.values.custom_fields[field.id] ?? { odi: "", t20: "", test: "" }}
-                onChange={(format, value) => {
-                  void formik.setFieldValue(`custom_fields.${field.id}.${format}`, value);
-                }}
-                onDelete={() => openConfirm(setPendingDelete, field)}
-              />
-            ))}
-          </section>
-        ) : null}
-
-        <FormatStatRow
-          row={MOTM_ROW}
-          formats={formats}
-          errors={formik.errors}
-          touched={formik.touched}
-          onChange={formik.handleChange}
-          onBlur={formik.handleBlur}
-        />
       </div>
 
       <div className="mt-8">
@@ -629,18 +751,20 @@ function FormatStatRow({
   onChange,
   onBlur,
 }: {
-  row: (typeof FORMAT_ROWS)[number];
+  row: FormatRow;
   formats: Record<FormatKey, FormFormat>;
   errors: unknown;
   touched: unknown;
   onChange: React.ChangeEventHandler<HTMLInputElement | HTMLSelectElement>;
   onBlur: React.FocusEventHandler<HTMLInputElement | HTMLSelectElement>;
 }) {
+  const shown = row.formats ?? FORMATS;
+  const cols = shown.length === 2 ? "md:grid-cols-2" : "md:grid-cols-3";
   return (
     <div>
       <p className={labelClass}>{row.label}</p>
-      <div className="grid gap-4 md:grid-cols-3">
-        {FORMATS.map((format) => {
+      <div className={`grid gap-4 ${cols}`}>
+        {shown.map((format) => {
           const name = `${format}.${row.key}`;
           const raw = getIn(touched, name) ? getIn(errors, name) : undefined;
           const error = typeof raw === "string" ? raw : undefined;
@@ -665,6 +789,132 @@ function FormatStatRow({
           );
         })}
       </div>
+    </div>
+  );
+}
+
+function PairFields({
+  label,
+  leftName,
+  rightName,
+  leftLabel,
+  rightLabel,
+  leftValue,
+  rightValue,
+  leftError,
+  rightError,
+  onChange,
+  onBlur,
+}: {
+  label: string;
+  leftName: string;
+  rightName: string;
+  leftLabel: string;
+  rightLabel: string;
+  leftValue: string;
+  rightValue: string;
+  leftError?: string;
+  rightError?: string;
+  onChange: React.ChangeEventHandler<HTMLInputElement>;
+  onBlur: React.FocusEventHandler<HTMLInputElement>;
+}) {
+  return (
+    <div>
+      <p className={labelClass}>{label}</p>
+      <div className="grid gap-4 md:grid-cols-2">
+        <StatPill
+          name={leftName}
+          caption={leftLabel}
+          value={leftValue}
+          error={leftError}
+          onChange={onChange}
+          onBlur={onBlur}
+        />
+        <StatPill
+          name={rightName}
+          caption={rightLabel}
+          value={rightValue}
+          error={rightError}
+          onChange={onChange}
+          onBlur={onBlur}
+        />
+      </div>
+    </div>
+  );
+}
+
+function CountryFields({
+  label,
+  names,
+  values,
+  fieldError,
+  onChange,
+  onBlur,
+}: {
+  label: string;
+  names: Record<(typeof TEST_COUNTRIES)[number], keyof PlayerFormValues>;
+  values: PlayerFormValues;
+  fieldError: (name: string) => string | undefined;
+  onChange: React.ChangeEventHandler<HTMLInputElement>;
+  onBlur: React.FocusEventHandler<HTMLInputElement>;
+}) {
+  return (
+    <div>
+      <p className={labelClass}>{label}</p>
+      <div className="grid gap-4 md:grid-cols-2">
+        {TEST_COUNTRIES.map((country) => {
+          const name = names[country];
+          const raw = values[name];
+          return (
+            <StatPill
+              key={country}
+              name={name}
+              caption={country}
+              captionClass="w-28"
+              value={typeof raw === "string" ? raw : ""}
+              error={fieldError(name)}
+              onChange={onChange}
+              onBlur={onBlur}
+            />
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function StatPill({
+  name,
+  caption,
+  captionClass = "w-16",
+  value,
+  error,
+  onChange,
+  onBlur,
+}: {
+  name: string;
+  caption: string;
+  captionClass?: string;
+  value: string;
+  error?: string;
+  onChange: React.ChangeEventHandler<HTMLInputElement>;
+  onBlur: React.FocusEventHandler<HTMLInputElement>;
+}) {
+  return (
+    <div>
+      <label className={`flex h-12 items-center rounded-full border bg-[#0c0c10] px-4 ${error ? "border-red-500/50" : "border-white/8"}`}>
+        <span className={`${captionClass} shrink-0 text-sm font-semibold text-white`}>{caption}</span>
+        <span className="mx-3 h-5 w-px bg-white/15" />
+        <input
+          name={name}
+          className="min-w-0 flex-1 bg-transparent text-sm text-white outline-none placeholder:text-zinc-500"
+          value={value}
+          onChange={onChange}
+          onBlur={onBlur}
+          placeholder="Enter value"
+        />
+      </label>
+      <ErrorText message={error} />
     </div>
   );
 }

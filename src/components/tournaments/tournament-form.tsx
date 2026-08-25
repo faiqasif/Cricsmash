@@ -79,7 +79,9 @@ export function TournamentForm({ templates, tournament }: TournamentFormProps) {
         <h1 className="text-[32px] font-semibold tracking-tight text-white">
           {editing ? "Edit tournament" : "Add a new Tournament"}
         </h1>
-        <p className="mt-1 text-sm text-zinc-500">Enter tournament details.</p>
+        <p className="mt-1 text-sm text-zinc-500">
+          Enter a tournament name. Questions are optional and can be added later.
+        </p>
 
         {formik.status ? (
           <p className="mt-4 rounded-2xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">
@@ -106,11 +108,12 @@ export function TournamentForm({ templates, tournament }: TournamentFormProps) {
 
         {formik.values.answers.length === 0 ? (
           <p className="mt-8 rounded-2xl border border-white/8 bg-[#121218] px-5 py-4 text-sm text-zinc-400">
-            No active tournament question templates yet.{" "}
+            You can save this tournament now and assign question answers later. To add answers here,
+            first{" "}
             <Link href="/questions/tournament/new" className="text-purple hover:underline">
-              Create a template
-            </Link>{" "}
-            first, then come back to assign answers.
+              create a tournament question template
+            </Link>
+            .
           </p>
         ) : (
           formik.values.answers.map((answer, index) => (
@@ -124,7 +127,8 @@ export function TournamentForm({ templates, tournament }: TournamentFormProps) {
               />
 
               <p className="mt-4 text-sm text-zinc-500">
-                Enter four options, then select the radio next to the correct answer.
+                Optional. To include this question, enter four options and select the radio next to
+                the correct answer.
               </p>
               <div className="mt-5 grid gap-4 md:grid-cols-2">
                 {OPTION_KEYS.map((name, optionIndex) => {

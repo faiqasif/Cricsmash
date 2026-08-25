@@ -37,6 +37,8 @@ export const FORMAT_LABELS = {
   test: "Test",
 } as const;
 
+export const TEST_COUNTRIES = ["India", "Australia", "England", "South Africa"] as const;
+
 export function countryCode(name: string) {
   return COUNTRIES.find((c) => c.name === name)?.code ?? "un";
 }
