@@ -2,8 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { TournamentForm } from "@/components/tournaments/tournament-form";
-import { api } from "@/lib/api";
-import type { Question, QuestionListResponse } from "@/lib/questions";
+import { fetchAllQuestions, type Question } from "@/lib/questions";
 
 export default function NewTournamentPage() {
   const [templates, setTemplates] = useState<Question[]>([]);
@@ -11,8 +10,8 @@ export default function NewTournamentPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    api<QuestionListResponse>("/api/v1/questions?type=tournament&status=active&page_size=50")
-      .then((data) => setTemplates(data.items))
+    fetchAllQuestions({ type: "tournament", status: "active" })
+      .then((items) => setTemplates(items))
       .catch(() => setError("Could not load tournament question templates."))
       .finally(() => setLoading(false));
   }, []);

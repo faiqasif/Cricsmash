@@ -271,8 +271,7 @@ export const playerSchema = Yup.object({
     then: (schema) =>
       schema
         .trim()
-        .required("Most dismissals against which bowler is required")
-        .min(2, "Enter at least 2 characters")
+        .test("min", "Enter at least 2 characters", (value) => !value || value.length >= 2)
         .max(150, "Must be 150 characters or fewer"),
     otherwise: (schema) => schema.trim(),
   }),

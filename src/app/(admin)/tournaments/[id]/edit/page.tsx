@@ -4,7 +4,8 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { TournamentForm } from "@/components/tournaments/tournament-form";
 import { api } from "@/lib/api";
-import type { Question, QuestionListResponse } from "@/lib/questions";
+import { fetchAllQuestions } from "@/lib/questions";
+import type { Question } from "@/lib/questions";
 import type { Tournament } from "@/lib/tournaments";
 
 export default function EditTournamentPage() {
@@ -17,12 +18,12 @@ export default function EditTournamentPage() {
     let cancelled = false;
     Promise.all([
       api<Tournament>(`/api/v1/tournaments/${params.id}`),
-      api<QuestionListResponse>("/api/v1/questions?type=tournament&status=active&page_size=50"),
+      fetchAllQuestions({ type: "tournament", status: "active" }),
     ])
       .then(([item, questions]) => {
         if (cancelled) return;
         setTournament(item);
-        setTemplates(questions.items);
+        setTemplates(questions);
       })
       .catch(() => {
         if (!cancelled) setError("Tournament not found.");

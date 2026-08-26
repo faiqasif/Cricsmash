@@ -5,6 +5,7 @@ import type { Tournament, TournamentPayload } from "@/lib/tournaments";
 export type TournamentAnswerFormValues = {
   question_id: string;
   title: string;
+  category_id: string;
   option_1: string;
   option_2: string;
   option_3: string;
@@ -45,6 +46,7 @@ export const tournamentSchema = Yup.object({
       Yup.object({
         question_id: Yup.string().required(),
         title: Yup.string(),
+        category_id: Yup.string(),
         option_1: optionSchema,
         option_2: optionSchema,
         option_3: optionSchema,
@@ -105,6 +107,7 @@ export function tournamentInitialValues(
     answers.push({
       question_id: template.id,
       title: template.title,
+      category_id: template.category_id,
       option_1: existing?.option_1 ?? "",
       option_2: existing?.option_2 ?? "",
       option_3: existing?.option_3 ?? "",
@@ -118,6 +121,7 @@ export function tournamentInitialValues(
     answers.push({
       question_id: item.question_id,
       title: item.question_title,
+      category_id: "",
       option_1: item.option_1,
       option_2: item.option_2,
       option_3: item.option_3,

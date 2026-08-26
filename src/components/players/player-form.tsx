@@ -413,7 +413,6 @@ export function PlayerForm({ player }: PlayerFormProps) {
             ))}
             <Field
               label="Most dismissals against which bowler in International cricket?"
-              required
               error={fieldError("most_dismissals_against_bowler")}
             >
               <input

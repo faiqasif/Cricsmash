@@ -2,11 +2,17 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
 import { useFormik } from "formik";
 import { ArrowLeft } from "lucide-react";
 import { ErrorText } from "@/components/form/error-text";
 import { api, ApiError } from "@/lib/api";
-import type { Question } from "@/lib/questions";
+import {
+  fetchAllCategories,
+  isQuizTournamentCategory,
+  type Category,
+  type Question,
+} from "@/lib/questions";
 import type { Tournament } from "@/lib/tournaments";
 import {
   tournamentInitialValues,
@@ -31,6 +37,8 @@ type TournamentFormProps = {
 export function TournamentForm({ templates, tournament }: TournamentFormProps) {
   const router = useRouter();
   const editing = Boolean(tournament);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [selectedCategoryId, setSelectedCategoryId] = useState("");
 
   const formik = useFormik<TournamentFormValues>({
     initialValues: tournamentInitialValues(templates, tournament),
@@ -58,6 +66,41 @@ export function TournamentForm({ templates, tournament }: TournamentFormProps) {
       }
     },
   });
+
+  useEffect(() => {
+    fetchAllCategories()
+      .then(setCategories)
+      .catch(() => setCategories([]));
+  }, []);
+
+  const quizCategories = useMemo(() => {
+    const byId = new Map<string, { id: string; name: string }>();
+    for (const category of categories) {
+      if (isQuizTournamentCategory(category.name)) {
+        byId.set(category.id, { id: category.id, name: category.name });
+      }
+    }
+    for (const template of templates) {
+      if (isQuizTournamentCategory(template.category_name)) {
+        byId.set(template.category_id, { id: template.category_id, name: template.category_name });
+      }
+    }
+    return [...byId.values()].sort((a, b) => a.name.localeCompare(b.name));
+  }, [categories, templates]);
+
+  useEffect(() => {
+    if (quizCategories.length === 0) {
+      setSelectedCategoryId("");
+      return;
+    }
+    if (!quizCategories.some((category) => category.id === selectedCategoryId)) {
+      setSelectedCategoryId(quizCategories[0].id);
+    }
+  }, [quizCategories, selectedCategoryId]);
+
+  const visibleAnswers = formik.values.answers
+    .map((answer, index) => ({ answer, index }))
+    .filter(({ answer }) => selectedCategoryId && answer.category_id === selectedCategoryId);
 
   function fieldError(name: string) {
     const touched = getPath(formik.touched, name);
@@ -106,77 +149,113 @@ export function TournamentForm({ templates, tournament }: TournamentFormProps) {
           </label>
         </div>
 
-        {formik.values.answers.length === 0 ? (
-          <p className="mt-8 rounded-2xl border border-white/8 bg-[#121218] px-5 py-4 text-sm text-zinc-400">
-            You can save this tournament now and assign question answers later. To add answers here,
-            first{" "}
-            <Link href="/questions/tournament/new" className="text-purple hover:underline">
-              create a tournament question template
-            </Link>
-            .
-          </p>
+        {quizCategories.length > 0 ? (
+          <div className="mt-8">
+            <p className={labelClass}>Category</p>
+            <p className="mb-3 text-sm text-zinc-500">
+              Select a Quiz Tournament category to see its questions.
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {quizCategories.map((category) => {
+                const selected = category.id === selectedCategoryId;
+                return (
+                  <button
+                    type="button"
+                    key={category.id}
+                    onClick={() => setSelectedCategoryId(category.id)}
+                    className={`h-10 rounded-full px-5 text-sm font-medium transition ${
+                      selected
+                        ? "bg-purple text-white"
+                        : "border border-white/10 bg-[#121218] text-zinc-300 hover:border-purple/50"
+                    }`}
+                  >
+                    {category.name}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
         ) : (
-          formik.values.answers.map((answer, index) => (
-            <div key={answer.question_id} className="mt-10">
-              <h2 className="text-lg font-semibold text-white">Question {index + 1}</h2>
-              <textarea
-                readOnly
-                rows={3}
-                value={answer.title}
-                className={`mt-4 ${inputClass} resize-none border-white/8 text-zinc-200`}
-              />
+          <p className="mt-8 rounded-2xl border border-white/8 bg-[#121218] px-5 py-4 text-sm text-zinc-400">
+            No Quiz Tournament categories yet. Create a category whose name starts with{" "}
+            <span className="text-white">Quiz Tournament</span>, then{" "}
+            <Link href="/questions/tournament/new" className="text-purple hover:underline">
+              add tournament questions
+            </Link>{" "}
+            to it.
+          </p>
+        )}
 
-              <p className="mt-4 text-sm text-zinc-500">
-                Optional. To include this question, enter four options and select the radio next to
-                the correct answer.
-              </p>
-              <div className="mt-5 grid gap-4 md:grid-cols-2">
-                {OPTION_KEYS.map((name, optionIndex) => {
-                  const fieldName = `answers.${index}.${name}`;
-                  const selected = formik.values.answers[index].correct_option === String(optionIndex + 1);
-                  return (
-                    <div key={name}>
-                      <div className="flex items-center gap-3">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            void formik.setFieldValue(`answers.${index}.correct_option`, String(optionIndex + 1));
-                            void formik.setFieldTouched(`answers.${index}.correct_option`, true, false);
-                          }}
-                          className={`flex size-6 shrink-0 items-center justify-center rounded-full border ${
-                            selected ? "border-purple" : "border-zinc-500"
+        {quizCategories.length > 0 && visibleAnswers.length === 0 ? (
+          <p className="mt-8 rounded-2xl border border-white/8 bg-[#121218] px-5 py-4 text-sm text-zinc-400">
+            No tournament questions in this category yet.{" "}
+            <Link href="/questions/tournament/new" className="text-purple hover:underline">
+              Create a tournament question template
+            </Link>{" "}
+            and assign it to this category.
+          </p>
+        ) : null}
+
+        {visibleAnswers.map(({ answer, index }, visibleIndex) => (
+          <div key={answer.question_id} className="mt-10">
+            <h2 className="text-lg font-semibold text-white">Question {visibleIndex + 1}</h2>
+            <textarea
+              readOnly
+              rows={3}
+              value={answer.title}
+              className={`mt-4 ${inputClass} resize-none border-white/8 text-zinc-200`}
+            />
+
+            <p className="mt-4 text-sm text-zinc-500">
+              Optional. To include this question, enter four options and select the radio next to
+              the correct answer.
+            </p>
+            <div className="mt-5 grid gap-4 md:grid-cols-2">
+              {OPTION_KEYS.map((name, optionIndex) => {
+                const fieldName = `answers.${index}.${name}`;
+                const selected = formik.values.answers[index].correct_option === String(optionIndex + 1);
+                return (
+                  <div key={name}>
+                    <div className="flex items-center gap-3">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          void formik.setFieldValue(`answers.${index}.correct_option`, String(optionIndex + 1));
+                          void formik.setFieldTouched(`answers.${index}.correct_option`, true, false);
+                        }}
+                        className={`flex size-6 shrink-0 items-center justify-center rounded-full border ${
+                          selected ? "border-purple" : "border-zinc-500"
+                        }`}
+                        aria-label={`Mark option ${OPTION_LABELS[optionIndex]} as correct`}
+                      >
+                        {selected ? <span className="size-3 rounded-full bg-purple" /> : null}
+                      </button>
+                      <span className="w-4 shrink-0 text-sm font-medium text-zinc-400">
+                        {OPTION_LABELS[optionIndex]}
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <input
+                          name={fieldName}
+                          value={formik.values.answers[index][name]}
+                          onChange={formik.handleChange}
+                          onBlur={formik.handleBlur}
+                          placeholder={`Option ${optionIndex + 1}`}
+                          className={`${fieldClass} ${
+                            fieldError(fieldName) ? "border-red-500/50" : "border-white/8"
                           }`}
-                          aria-label={`Mark option ${OPTION_LABELS[optionIndex]} as correct`}
-                        >
-                          {selected ? <span className="size-3 rounded-full bg-purple" /> : null}
-                        </button>
-                        <span className="w-4 shrink-0 text-sm font-medium text-zinc-400">
-                          {OPTION_LABELS[optionIndex]}
-                        </span>
-                        <div className="min-w-0 flex-1">
-                          <input
-                            name={fieldName}
-                            value={formik.values.answers[index][name]}
-                            onChange={formik.handleChange}
-                            onBlur={formik.handleBlur}
-                            placeholder={`Option ${optionIndex + 1}`}
-                            className={`${fieldClass} ${
-                              fieldError(fieldName) ? "border-red-500/50" : "border-white/8"
-                            }`}
-                          />
-                        </div>
-                      </div>
-                      <div className="pl-[52px]">
-                        <ErrorText message={fieldError(fieldName)} />
+                        />
                       </div>
                     </div>
-                  );
-                })}
-              </div>
-              <ErrorText message={fieldError(`answers.${index}.correct_option`)} />
+                    <div className="pl-[52px]">
+                      <ErrorText message={fieldError(fieldName)} />
+                    </div>
+                  </div>
+                );
+              })}
             </div>
-          ))
-        )}
+            <ErrorText message={fieldError(`answers.${index}.correct_option`)} />
+          </div>
+        ))}
 
         <div className="mt-10 flex flex-wrap gap-3">
           <Link

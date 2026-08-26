@@ -25,6 +25,32 @@ export type CategoryPayload = {
 
 export const GENERAL_CATEGORY_NAME = "General Questions";
 
+export function isQuizTournamentCategory(name: string) {
+  const value = name.trim().toLowerCase().replace(/[\s-]+/g, "_");
+  return value.startsWith("quiz_tournament") || value.startsWith("quiz_tournmant");
+}
+
+export async function fetchAllQuestions(params: {
+  type: QuestionType;
+  status?: QuestionStatus;
+}): Promise<Question[]> {
+  const pageSize = 50;
+  const search = new URLSearchParams({
+    type: params.type,
+    page: "1",
+    page_size: String(pageSize),
+  });
+  if (params.status) search.set("status", params.status);
+  const first = await api<QuestionListResponse>(`/api/v1/questions?${search.toString()}`);
+  const items = [...first.items];
+  for (let page = 2; page <= first.total_pages; page += 1) {
+    search.set("page", String(page));
+    const next = await api<QuestionListResponse>(`/api/v1/questions?${search.toString()}`);
+    items.push(...next.items);
+  }
+  return items;
+}
+
 export async function fetchAllCategories(): Promise<Category[]> {
   const pageSize = 50;
   const first = await api<CategoryListResponse>(`/api/v1/categories?page=1&page_size=${pageSize}`);
