@@ -18,7 +18,7 @@ export default function EditTournamentPage() {
     let cancelled = false;
     Promise.all([
       api<Tournament>(`/api/v1/tournaments/${params.id}`),
-      fetchAllQuestions({ type: "tournament", status: "active" }),
+      fetchAllQuestions({ type: "tournament", status: "active", tournamentId: params.id }),
     ])
       .then(([item, questions]) => {
         if (cancelled) return;

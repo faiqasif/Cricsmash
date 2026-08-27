@@ -1,8 +1,12 @@
+import type { QuestionStatus } from "@/lib/questions";
+
 export type TournamentAnswer = {
   id: string;
   question_id: string;
   question_title: string;
   question_status: string;
+  question_category_id: string;
+  question_tournament_id: string | null;
   option_1: string;
   option_2: string;
   option_3: string;
@@ -42,5 +46,15 @@ export type TournamentPayload = {
     option_3: string;
     option_4: string;
     correct_option: number;
+  }[];
+  new_questions: {
+    title: string;
+    category_id: string;
+    status: QuestionStatus;
+    option_1?: string;
+    option_2?: string;
+    option_3?: string;
+    option_4?: string;
+    correct_option?: number;
   }[];
 };

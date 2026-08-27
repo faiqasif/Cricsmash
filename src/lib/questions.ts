@@ -33,6 +33,7 @@ export function isQuizTournamentCategory(name: string) {
 export async function fetchAllQuestions(params: {
   type: QuestionType;
   status?: QuestionStatus;
+  tournamentId?: string;
 }): Promise<Question[]> {
   const pageSize = 50;
   const search = new URLSearchParams({
@@ -41,6 +42,7 @@ export async function fetchAllQuestions(params: {
     page_size: String(pageSize),
   });
   if (params.status) search.set("status", params.status);
+  if (params.tournamentId) search.set("tournament_id", params.tournamentId);
   const first = await api<QuestionListResponse>(`/api/v1/questions?${search.toString()}`);
   const items = [...first.items];
   for (let page = 2; page <= first.total_pages; page += 1) {
@@ -69,6 +71,7 @@ export type Question = {
   category_id: string;
   category_name: string;
   status: QuestionStatus;
+  tournament_id?: string | null;
   image_url: string | null;
   option_1: string | null;
   option_2: string | null;

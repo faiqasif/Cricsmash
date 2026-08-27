@@ -3,9 +3,10 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import { useFormik } from "formik";
-import { ArrowLeft } from "lucide-react";
+import { useFormik, type FormikErrors } from "formik";
+import { ArrowLeft, Plus } from "lucide-react";
 import { ErrorText } from "@/components/form/error-text";
+import { TournamentQuestionCreateSection } from "@/components/questions/tournament-question-create-section";
 import { api, ApiError } from "@/lib/api";
 import {
   fetchAllCategories,
@@ -14,10 +15,12 @@ import {
   type Question,
 } from "@/lib/questions";
 import type { Tournament } from "@/lib/tournaments";
+import type { QuestionFormValues } from "@/validation/question";
 import {
+  firstTournamentError,
   tournamentInitialValues,
   tournamentPayloadFromValues,
-  tournamentSchema,
+  validateTournamentForm,
   type TournamentFormValues,
 } from "@/validation/tournament";
 
@@ -39,13 +42,15 @@ export function TournamentForm({ templates, tournament }: TournamentFormProps) {
   const editing = Boolean(tournament);
   const [categories, setCategories] = useState<Category[]>([]);
   const [selectedCategoryId, setSelectedCategoryId] = useState("");
+  const [showSpecificQuestion, setShowSpecificQuestion] = useState(false);
 
   const formik = useFormik<TournamentFormValues>({
     initialValues: tournamentInitialValues(templates, tournament),
     enableReinitialize: true,
-    validationSchema: tournamentSchema,
+    validate: validateTournamentForm,
     onSubmit: async (values, helpers) => {
       helpers.setStatus("");
+      helpers.setSubmitting(true);
       try {
         const body = tournamentPayloadFromValues(values);
         if (editing && tournament) {
@@ -63,6 +68,8 @@ export function TournamentForm({ templates, tournament }: TournamentFormProps) {
         router.refresh();
       } catch (err) {
         helpers.setStatus(err instanceof ApiError ? err.message : "Could not save tournament.");
+      } finally {
+        helpers.setSubmitting(false);
       }
     },
   });
@@ -85,8 +92,16 @@ export function TournamentForm({ templates, tournament }: TournamentFormProps) {
         byId.set(template.category_id, { id: template.category_id, name: template.category_name });
       }
     }
+    for (const answer of formik.values.answers) {
+      if (!answer.is_new && !answer.is_specific) continue;
+      const category = categories.find((item) => item.id === answer.category_id);
+      const name = category?.name || answer.category_name;
+      if (answer.category_id && name) {
+        byId.set(answer.category_id, { id: answer.category_id, name });
+      }
+    }
     return [...byId.values()].sort((a, b) => a.name.localeCompare(b.name));
-  }, [categories, templates]);
+  }, [categories, templates, formik.values.answers]);
 
   useEffect(() => {
     if (quizCategories.length === 0) {
@@ -102,6 +117,74 @@ export function TournamentForm({ templates, tournament }: TournamentFormProps) {
     .map((answer, index) => ({ answer, index }))
     .filter(({ answer }) => selectedCategoryId && answer.category_id === selectedCategoryId);
 
+  function addSpecificQuestion(values: QuestionFormValues) {
+    const category = categories.find((item) => item.id === values.category_id);
+    const clientId = `new-${crypto.randomUUID()}`;
+    void formik.setFieldValue("answers", [
+      ...formik.values.answers,
+      {
+        question_id: "",
+        client_id: clientId,
+        title: values.title.trim(),
+        category_id: values.category_id,
+        category_name: category?.name ?? "",
+        status: values.status,
+        is_new: true,
+        is_specific: true,
+        option_1: "",
+        option_2: "",
+        option_3: "",
+        option_4: "",
+        correct_option: "",
+      },
+    ]);
+    setSelectedCategoryId(values.category_id);
+    setShowSpecificQuestion(false);
+  }
+
+  async function saveTournament() {
+    const errors = validateTournamentForm(formik.values);
+    const message = firstTournamentError(errors);
+    void formik.setErrors(errors as FormikErrors<TournamentFormValues>);
+    void formik.setTouched({
+      name: true,
+      answers: formik.values.answers.map(() => ({
+        option_1: true,
+        option_2: true,
+        option_3: true,
+        option_4: true,
+        correct_option: true,
+      })),
+    });
+    if (message) {
+      formik.setStatus(message);
+      return;
+    }
+
+    formik.setStatus("");
+    formik.setSubmitting(true);
+    try {
+      const body = tournamentPayloadFromValues(formik.values);
+      if (editing && tournament) {
+        await api(`/api/v1/tournaments/${tournament.id}`, {
+          method: "PUT",
+          body: JSON.stringify(body),
+        });
+      } else {
+        await api("/api/v1/tournaments", {
+          method: "POST",
+          body: JSON.stringify(body),
+        });
+      }
+      router.push("/tournaments");
+      router.refresh();
+    } catch (err) {
+      formik.setStatus(err instanceof ApiError ? err.message : "Could not save tournament.");
+    } finally {
+      formik.setSubmitting(false);
+    }
+  }
+
   function fieldError(name: string) {
     const touched = getPath(formik.touched, name);
     const error = getPath(formik.errors, name);
@@ -109,7 +192,14 @@ export function TournamentForm({ templates, tournament }: TournamentFormProps) {
   }
 
   return (
-    <form onSubmit={formik.handleSubmit} noValidate className="pb-10">
+    <form
+      onSubmit={(event) => {
+        event.preventDefault();
+        void saveTournament();
+      }}
+      noValidate
+      className="pb-10"
+    >
       <div className="rounded-[28px] bg-[#14141a] px-6 py-8 sm:px-8">
         <Link
           href="/tournaments"
@@ -148,6 +238,25 @@ export function TournamentForm({ templates, tournament }: TournamentFormProps) {
             <ErrorText message={fieldError("name")} />
           </label>
         </div>
+
+        {showSpecificQuestion ? (
+          <TournamentQuestionCreateSection
+            categories={categories}
+            onAdd={addSpecificQuestion}
+            onCancel={() => setShowSpecificQuestion(false)}
+          />
+        ) : (
+          <div className="mt-8 flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setShowSpecificQuestion(true)}
+              className="inline-flex h-12 items-center justify-center gap-2 rounded-full bg-purple px-6 text-sm font-medium text-white shadow-[0_0_24px_rgba(124,92,255,0.35)]"
+            >
+              <Plus className="size-4" />
+              Create tournament specific question
+            </button>
+          </div>
+        )}
 
         {quizCategories.length > 0 ? (
           <div className="mt-8">
@@ -197,8 +306,15 @@ export function TournamentForm({ templates, tournament }: TournamentFormProps) {
         ) : null}
 
         {visibleAnswers.map(({ answer, index }, visibleIndex) => (
-          <div key={answer.question_id} className="mt-10">
-            <h2 className="text-lg font-semibold text-white">Question {visibleIndex + 1}</h2>
+          <div key={answer.client_id || answer.question_id} className="mt-10">
+            <div className="flex flex-wrap items-center gap-3">
+              <h2 className="text-lg font-semibold text-white">Question {visibleIndex + 1}</h2>
+              {answer.is_specific ? (
+                <span className="rounded-full border border-purple/40 bg-purple/10 px-3 py-1 text-xs font-medium text-purple">
+                  This tournament only
+                </span>
+              ) : null}
+            </div>
             <textarea
               readOnly
               rows={3}
