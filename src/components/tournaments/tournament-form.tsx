@@ -4,9 +4,10 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { useFormik, type FormikErrors } from "formik";
-import { ArrowLeft, Plus } from "lucide-react";
+import { ArrowLeft, Pencil, Plus, Trash2 } from "lucide-react";
 import { ErrorText } from "@/components/form/error-text";
 import { TournamentQuestionCreateSection } from "@/components/questions/tournament-question-create-section";
+import { ConfirmDeleteModal, openConfirm } from "@/components/ui/confirm-delete-modal";
 import { api, ApiError } from "@/lib/api";
 import {
   fetchAllCategories,
@@ -15,12 +16,13 @@ import {
   type Question,
 } from "@/lib/questions";
 import type { Tournament } from "@/lib/tournaments";
-import type { QuestionFormValues } from "@/validation/question";
+import { questionPayloadFromValues, type QuestionFormValues } from "@/validation/question";
 import {
   firstTournamentError,
   tournamentInitialValues,
   tournamentPayloadFromValues,
   validateTournamentForm,
+  type TournamentAnswerFormValues,
   type TournamentFormValues,
 } from "@/validation/tournament";
 
@@ -43,6 +45,8 @@ export function TournamentForm({ templates, tournament }: TournamentFormProps) {
   const [categories, setCategories] = useState<Category[]>([]);
   const [selectedCategoryId, setSelectedCategoryId] = useState("");
   const [showSpecificQuestion, setShowSpecificQuestion] = useState(false);
+  const [editingAnswer, setEditingAnswer] = useState<TournamentAnswerFormValues | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<TournamentAnswerFormValues | null>(null);
 
   const formik = useFormik<TournamentFormValues>({
     initialValues: tournamentInitialValues(templates, tournament),
@@ -140,6 +144,47 @@ export function TournamentForm({ templates, tournament }: TournamentFormProps) {
     ]);
     setSelectedCategoryId(values.category_id);
     setShowSpecificQuestion(false);
+    setEditingAnswer(null);
+  }
+
+  async function saveSpecificQuestion(values: QuestionFormValues) {
+    if (!editingAnswer) return;
+    const category = categories.find((item) => item.id === values.category_id);
+    if (!editingAnswer.is_new && editingAnswer.question_id) {
+      await api(`/api/v1/questions/${editingAnswer.question_id}`, {
+        method: "PUT",
+        body: JSON.stringify(questionPayloadFromValues(values, "tournament")),
+      });
+    }
+    void formik.setFieldValue(
+      "answers",
+      formik.values.answers.map((item) =>
+        item.client_id === editingAnswer.client_id
+          ? {
+              ...item,
+              title: values.title.trim(),
+              category_id: values.category_id,
+              category_name: category?.name ?? item.category_name,
+              status: values.status,
+            }
+          : item,
+      ),
+    );
+    setSelectedCategoryId(values.category_id);
+    setEditingAnswer(null);
+  }
+
+  async function deleteSpecificQuestion(answer: TournamentAnswerFormValues) {
+    if (!answer.is_new && answer.question_id) {
+      await api(`/api/v1/questions/${answer.question_id}`, { method: "DELETE" });
+    }
+    void formik.setFieldValue(
+      "answers",
+      formik.values.answers.filter((item) => item.client_id !== answer.client_id),
+    );
+    if (editingAnswer?.client_id === answer.client_id) {
+      setEditingAnswer(null);
+    }
   }
 
   async function saveTournament() {
@@ -192,6 +237,7 @@ export function TournamentForm({ templates, tournament }: TournamentFormProps) {
   }
 
   return (
+    <>
     <form
       onSubmit={(event) => {
         event.preventDefault();
@@ -242,14 +288,37 @@ export function TournamentForm({ templates, tournament }: TournamentFormProps) {
         {showSpecificQuestion ? (
           <TournamentQuestionCreateSection
             categories={categories}
-            onAdd={addSpecificQuestion}
+            onSave={addSpecificQuestion}
             onCancel={() => setShowSpecificQuestion(false)}
+          />
+        ) : editingAnswer ? (
+          <TournamentQuestionCreateSection
+            key={editingAnswer.client_id}
+            categories={categories}
+            initialValues={{
+              title: editingAnswer.title,
+              category_id: editingAnswer.category_id,
+              status: editingAnswer.status,
+              option_1: "",
+              option_2: "",
+              option_3: "",
+              option_4: "",
+              correct_option: "",
+            }}
+            heading="Edit tournament specific question"
+            description="Update this question. It will still only be available on this tournament."
+            submitLabel="Save Question"
+            onSave={saveSpecificQuestion}
+            onCancel={() => setEditingAnswer(null)}
           />
         ) : (
           <div className="mt-8 flex flex-wrap items-center gap-3">
             <button
               type="button"
-              onClick={() => setShowSpecificQuestion(true)}
+              onClick={() => {
+                setEditingAnswer(null);
+                setShowSpecificQuestion(true);
+              }}
               className="inline-flex h-12 items-center justify-center gap-2 rounded-full bg-purple px-6 text-sm font-medium text-white shadow-[0_0_24px_rgba(124,92,255,0.35)]"
             >
               <Plus className="size-4" />
@@ -310,9 +379,32 @@ export function TournamentForm({ templates, tournament }: TournamentFormProps) {
             <div className="flex flex-wrap items-center gap-3">
               <h2 className="text-lg font-semibold text-white">Question {visibleIndex + 1}</h2>
               {answer.is_specific ? (
-                <span className="rounded-full border border-purple/40 bg-purple/10 px-3 py-1 text-xs font-medium text-purple">
-                  This tournament only
-                </span>
+                <>
+                  <span className="rounded-full border border-purple/40 bg-purple/10 px-3 py-1 text-xs font-medium text-purple">
+                    This tournament only
+                  </span>
+                  <div className="ml-auto flex items-center gap-2">
+                    <button
+                      type="button"
+                      aria-label={`Edit ${answer.title}`}
+                      onClick={() => {
+                        setShowSpecificQuestion(false);
+                        setEditingAnswer(answer);
+                      }}
+                      className="inline-flex size-9 items-center justify-center rounded-full border border-white/10 text-zinc-400 transition hover:border-purple/40 hover:text-white"
+                    >
+                      <Pencil className="size-4" />
+                    </button>
+                    <button
+                      type="button"
+                      aria-label={`Delete ${answer.title}`}
+                      onClick={() => openConfirm(setPendingDelete, answer)}
+                      className="inline-flex size-9 items-center justify-center rounded-full border border-white/10 text-zinc-400 transition hover:border-red-500/40 hover:text-red-400"
+                    >
+                      <Trash2 className="size-4" />
+                    </button>
+                  </div>
+                </>
               ) : null}
             </div>
             <textarea
@@ -390,6 +482,21 @@ export function TournamentForm({ templates, tournament }: TournamentFormProps) {
         </div>
       </div>
     </form>
+      <ConfirmDeleteModal
+        open={Boolean(pendingDelete)}
+        title="Delete question?"
+        description={
+          pendingDelete
+            ? `“${pendingDelete.title}” will be removed from this tournament. This cannot be undone.`
+            : ""
+        }
+        onClose={() => setPendingDelete(null)}
+        onConfirm={async () => {
+          if (!pendingDelete) return;
+          await deleteSpecificQuestion(pendingDelete);
+        }}
+      />
+    </>
   );
 }
 
