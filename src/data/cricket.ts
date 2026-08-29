@@ -23,7 +23,7 @@ export const CUSTOM_FIELD_ROLES = [
 export type CustomFieldAppliesTo = (typeof CUSTOM_FIELD_ROLES)[number]["value"];
 
 export const ROLES = [
-  { value: "batsman", label: "Batsman" },
+  { value: "batsman", label: "Batter" },
   { value: "bowler", label: "Bowler" },
   { value: "all-rounder", label: "All-rounder" },
   { value: "wicketkeeper", label: "Wicketkeeper" },
