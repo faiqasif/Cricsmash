@@ -4,11 +4,11 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { getIn, useFormik } from "formik";
-import { ArrowLeft, ChevronDown, Plus, Trash2 } from "lucide-react";
+import { ArrowLeft, Calendar, ChevronDown, Plus, Trash2 } from "lucide-react";
 import { ErrorText } from "@/components/form/error-text";
 import { CreateFieldModal } from "@/components/players/create-field-modal";
 import { ConfirmDeleteModal, openConfirm } from "@/components/ui/confirm-delete-modal";
-import { COUNTRIES, customAppliesToForRole, FORMAT_LABELS, FORMATS, ROLES, TEST_COUNTRIES } from "@/data/cricket";
+import { COUNTRIES, customAppliesToForRole, FORMAT_LABELS, FORMATS, PLAYING_HANDS, ROLES, TEST_COUNTRIES } from "@/data/cricket";
 import { api, ApiError, uploadPlayerPhoto } from "@/lib/api";
 import type { FormatKey, FormatStats, Player, PlayerCustomField } from "@/lib/players";
 import {
@@ -60,6 +60,8 @@ const BATTING_ROWS = FORMAT_ROWS.filter((row) => row.group === "batting" && row.
 const BATTING_POSITION_ROW = FORMAT_ROWS.find((row) => row.key === "batting_position")!;
 const BOWLING_ROWS = FORMAT_ROWS.filter((row) => row.group === "bowling");
 const KEEPING_ROWS = FORMAT_ROWS.filter((row) => row.group === "keeping");
+const HUNDREDS_ROW = FORMAT_ROWS.find((row) => row.key === "hundreds")!;
+const WICKETS_ROW = FORMAT_ROWS.find((row) => row.key === "wickets")!;
 
 const inputClass =
   "h-12 w-full rounded-full border bg-[#0c0c10] px-5 text-sm text-white outline-none placeholder:text-zinc-500 focus:border-purple/50";
@@ -344,6 +346,36 @@ export function PlayerForm({ player }: PlayerFormProps) {
             </option>
           ))}
         </SelectField>
+        <Field label="Date of birth" error={fieldError("date_of_birth")}>
+          <div className="relative">
+            <input
+              type="date"
+              name="date_of_birth"
+              className={`${inputClassName(fieldError("date_of_birth"))} [color-scheme:dark] pr-12 [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:inset-0 [&::-webkit-calendar-picker-indicator]:h-full [&::-webkit-calendar-picker-indicator]:w-full [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-0`}
+              value={formik.values.date_of_birth}
+              max={new Date().toISOString().slice(0, 10)}
+              min="1850-01-01"
+              onChange={formik.handleChange}
+              onBlur={formik.handleBlur}
+            />
+            <Calendar className="pointer-events-none absolute right-4 top-1/2 size-4 -translate-y-1/2 text-zinc-500" />
+          </div>
+        </Field>
+        <SelectField
+          label="Playing hand"
+          name="playing_hand"
+          value={formik.values.playing_hand}
+          onChange={(value) => formik.setFieldValue("playing_hand", value)}
+          onBlur={formik.handleBlur}
+          placeholder="Select playing hand"
+          error={fieldError("playing_hand")}
+        >
+          {PLAYING_HANDS.map((item) => (
+            <option key={item.value} value={item.value}>
+              {item.label}
+            </option>
+          ))}
+        </SelectField>
         <Field label="Number of International Tournaments won" error={fieldError("tournaments_won")}>
           <input
             name="tournaments_won"
@@ -411,6 +443,16 @@ export function PlayerForm({ player }: PlayerFormProps) {
                 onBlur={formik.handleBlur}
               />
             ))}
+            {formik.values.role === "batsman" ? (
+              <FormatStatRow
+                row={WICKETS_ROW}
+                formats={formats}
+                errors={formik.errors}
+                touched={formik.touched}
+                onChange={formik.handleChange}
+                onBlur={formik.handleBlur}
+              />
+            ) : null}
             <Field
               label="Most dismissals against which bowler in International cricket?"
               error={fieldError("most_dismissals_against_bowler")}
@@ -499,6 +541,16 @@ export function PlayerForm({ player }: PlayerFormProps) {
                 onBlur={formik.handleBlur}
               />
             ))}
+            {formik.values.role === "bowler" ? (
+              <FormatStatRow
+                row={HUNDREDS_ROW}
+                formats={formats}
+                errors={formik.errors}
+                touched={formik.touched}
+                onChange={formik.handleChange}
+                onBlur={formik.handleBlur}
+              />
+            ) : null}
             <Field
               label="Which batter has he dismissed the most number of times?"
               error={fieldError("most_dismissed_batter")}

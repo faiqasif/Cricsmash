@@ -7,6 +7,8 @@ export type PlayerFormValues = {
   name: string;
   country: string;
   role: string;
+  date_of_birth: string;
+  playing_hand: string;
   tournaments_won: string;
   captain: string;
   catches: string;
@@ -52,6 +54,14 @@ export function showsBowling(role: string) {
 
 export function showsKeeping(role: string) {
   return role.trim().toLowerCase() === "wicketkeeper";
+}
+
+export function showsHundreds(role: string) {
+  return showsBatting(role) || role.trim().toLowerCase() === "bowler";
+}
+
+export function showsWickets(role: string) {
+  return showsBowling(role) || role.trim().toLowerCase() === "batsman";
 }
 
 const BATTING_KEYS: (keyof FormatStats)[] = [
@@ -142,6 +152,8 @@ export function playerInitialValues(player?: Player): PlayerFormValues {
     name: player?.name ?? "",
     country: player?.country ?? "",
     role: player?.role ?? "",
+    date_of_birth: dateToForm(player?.date_of_birth),
+    playing_hand: player?.playing_hand ?? "",
     tournaments_won: player?.tournaments_won != null ? String(player.tournaments_won) : "",
     captain: player?.captained_international == null ? "" : player.captained_international ? "yes" : "no",
     catches: player?.catches != null ? String(player.catches) : "",
@@ -178,6 +190,11 @@ export function playerInitialValues(player?: Player): PlayerFormValues {
 
 function numToForm(value?: number | null) {
   return value != null ? String(value) : "";
+}
+
+function dateToForm(value?: string | null) {
+  if (!value) return "";
+  return value.slice(0, 10);
 }
 
 function customFieldsFromPlayer(player?: Player): PlayerFormValues["custom_fields"] {
@@ -258,6 +275,23 @@ export const playerSchema = Yup.object({
   role: Yup.string()
     .oneOf(["batsman", "bowler", "all-rounder", "wicketkeeper"], "Select a playing role")
     .required("Select a playing role"),
+  date_of_birth: Yup.string()
+    .trim()
+    .test("date", "Enter a valid date of birth", (value) => {
+      if (!value) return true;
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+      const parsed = new Date(`${value}T00:00:00`);
+      return Number.isFinite(parsed.getTime());
+    })
+    .test("range", "Date of birth cannot be in the future", (value) => {
+      if (!value) return true;
+      return value <= new Date().toISOString().slice(0, 10);
+    })
+    .test("min", "Enter a valid date of birth", (value) => {
+      if (!value) return true;
+      return value >= "1850-01-01";
+    }),
+  playing_hand: Yup.string().oneOf(["", "righty", "lefty"], "Select a playing hand"),
   tournaments_won: optionalWholeNumber("Enter a valid tournament count"),
   captain: Yup.string().oneOf(["", "yes", "no"]),
   catches: optionalWholeNumber("Enter a valid catch count"),
@@ -338,18 +372,19 @@ const FORMAT_KINDS: Record<keyof FormatStats, "int" | "float" | "text"> = {
   stumpings: "int",
 };
 
-function toFormatPayload(
-  form: FormFormat,
-  battingVisible: boolean,
-  bowlingVisible: boolean,
-  keepingVisible: boolean,
-  format: "odi" | "t20" | "test",
-): FormatStats {
+function toFormatPayload(form: FormFormat, role: string, format: "odi" | "t20" | "test"): FormatStats {
+  const battingVisible = showsBatting(role);
+  const bowlingVisible = showsBowling(role);
+  const keepingVisible = showsKeeping(role);
+  const hundredsVisible = showsHundreds(role);
+  const wicketsVisible = showsWickets(role);
   const out = {} as FormatStats;
   (Object.keys(form) as (keyof FormatStats)[]).forEach((key) => {
     const hidden =
-      (BATTING_KEYS.includes(key) && !battingVisible) ||
-      (BOWLING_KEYS.includes(key) && !bowlingVisible) ||
+      (key === "hundreds" && !hundredsVisible) ||
+      (key === "wickets" && !wicketsVisible) ||
+      (key !== "hundreds" && BATTING_KEYS.includes(key) && !battingVisible) ||
+      (key !== "wickets" && BOWLING_KEYS.includes(key) && !bowlingVisible) ||
       (KEEPING_KEYS.includes(key) && !keepingVisible) ||
       (key === "batting_position" && format === "t20");
     const kind = FORMAT_KINDS[key];
@@ -369,11 +404,12 @@ function toFormatPayload(
 export function playerPayloadFromValues(values: PlayerFormValues, photoUrl: string | null): PlayerPayload {
   const battingVisible = showsBatting(values.role);
   const bowlingVisible = showsBowling(values.role);
-  const keepingVisible = showsKeeping(values.role);
   const payload: PlayerPayload = {
     name: values.name.trim(),
     country: values.country,
     role: values.role,
+    date_of_birth: values.date_of_birth.trim() || null,
+    playing_hand: values.playing_hand.trim() || null,
     photo_url: photoUrl,
     tournaments_won: toNumber(values.tournaments_won, "int"),
     captained_international: values.captain === "" ? null : values.captain === "yes",
@@ -381,9 +417,9 @@ export function playerPayloadFromValues(values: PlayerFormValues, photoUrl: stri
     most_dismissed_batter: bowlingVisible ? values.most_dismissed_batter.trim() || null : null,
     most_dismissals_against_bowler: battingVisible ? values.most_dismissals_against_bowler.trim() : "",
     status: values.status,
-    odi: toFormatPayload(values.odi, battingVisible, bowlingVisible, keepingVisible, "odi"),
-    t20: toFormatPayload(values.t20, battingVisible, bowlingVisible, keepingVisible, "t20"),
-    test: toFormatPayload(values.test, battingVisible, bowlingVisible, keepingVisible, "test"),
+    odi: toFormatPayload(values.odi, values.role, "odi"),
+    t20: toFormatPayload(values.t20, values.role, "t20"),
+    test: toFormatPayload(values.test, values.role, "test"),
     custom_fields: Object.entries(values.custom_fields).map(([fieldId, formats]) => ({
       field_id: fieldId,
       odi: formats.odi.trim() || null,

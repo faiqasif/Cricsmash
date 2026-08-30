@@ -32,6 +32,8 @@ export type Player = {
   name: string;
   country: string;
   role: string;
+  date_of_birth: string | null;
+  playing_hand: string | null;
   photo_url: string | null;
   tournaments_won: number | null;
   captained_international: boolean | null;
@@ -102,6 +104,8 @@ export type PlayerPayload = {
   name: string;
   country: string;
   role: string;
+  date_of_birth?: string | null;
+  playing_hand?: string | null;
   photo_url?: string | null;
   tournaments_won?: number | null;
   captained_international?: boolean | null;

@@ -29,6 +29,11 @@ export const ROLES = [
   { value: "wicketkeeper", label: "Wicketkeeper" },
 ] as const;
 
+export const PLAYING_HANDS = [
+  { value: "righty", label: "Righty" },
+  { value: "lefty", label: "Lefty" },
+] as const;
+
 export const FORMATS = ["odi", "t20", "test"] as const;
 
 export const FORMAT_LABELS = {
