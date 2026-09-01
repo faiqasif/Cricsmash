@@ -3,7 +3,12 @@
 import { ChevronDown } from "lucide-react";
 import type { ChangeEventHandler, FocusEventHandler } from "react";
 import { ErrorText } from "@/components/form/error-text";
-import type { Category } from "@/lib/questions";
+import {
+  fillTournamentTitle,
+  insertTournamentNameToken,
+  TOURNAMENT_NAME_TOKEN,
+  type Category,
+} from "@/lib/questions";
 import type { QuestionFormValues } from "@/validation/question";
 
 const inputClass =
@@ -21,6 +26,8 @@ type TournamentQuestionFieldsProps = {
   onChange: ChangeEventHandler<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>;
   onBlur: FocusEventHandler<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>;
   onStatusChange: (status: QuestionFormValues["status"]) => void;
+  onTitleChange?: (title: string) => void;
+  previewTournamentName?: string;
 };
 
 export function TournamentQuestionFields({
@@ -30,7 +37,12 @@ export function TournamentQuestionFields({
   onChange,
   onBlur,
   onStatusChange,
+  onTitleChange,
+  previewTournamentName = "World Cup 2023",
 }: TournamentQuestionFieldsProps) {
+  const preview = fillTournamentTitle(values.title, previewTournamentName);
+  const hasToken = values.title.includes(TOURNAMENT_NAME_TOKEN);
+
   return (
     <>
       <div>
@@ -38,18 +50,42 @@ export function TournamentQuestionFields({
           <span className={labelClass}>
             Question Title<span className="text-red-400">*</span>
           </span>
-          <p className="mb-3 text-sm text-zinc-500">Enter the question exactly as it will appear to users.</p>
+          <p className="mb-3 text-sm text-zinc-500">
+            Write the question once, and put{" "}
+            <span className="font-medium text-white">{TOURNAMENT_NAME_TOKEN}</span> where the
+            tournament name should appear. Each tournament will fill in its own name.
+          </p>
           <textarea
             name="title"
             rows={4}
             value={values.title}
             onChange={onChange}
             onBlur={onBlur}
-            placeholder="e.g. Which team scored the most runs in the tournament?"
+            placeholder={`e.g. Who was the leading run scorer of ${TOURNAMENT_NAME_TOKEN}?`}
             className={`${inputClass} resize-none ${fieldError("title") ? "border-red-500/50" : "border-white/8"}`}
           />
           <ErrorText message={fieldError("title")} />
         </label>
+        {onTitleChange ? (
+          <button
+            type="button"
+            onClick={() => onTitleChange(insertTournamentNameToken(values.title))}
+            className="mt-3 text-sm font-medium text-purple hover:underline"
+          >
+            Insert tournament name at the end
+          </button>
+        ) : null}
+        {values.title.trim() ? (
+          <p className="mt-3 text-sm text-zinc-500">
+            Preview:{" "}
+            <span className="text-zinc-200">{preview}</span>
+            {hasToken ? null : (
+              <span className="mt-1 block text-zinc-500">
+                Add {TOURNAMENT_NAME_TOKEN} so the tournament name is filled in automatically.
+              </span>
+            )}
+          </p>
+        ) : null}
       </div>
 
       <div className="mt-8">

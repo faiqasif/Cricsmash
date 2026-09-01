@@ -17,6 +17,7 @@ type TournamentQuestionCreateSectionProps = {
   heading?: string;
   description?: string;
   submitLabel?: string;
+  previewTournamentName?: string;
   onSave: (values: QuestionFormValues) => void | Promise<void>;
   onCancel: () => void;
 };
@@ -27,6 +28,7 @@ export function TournamentQuestionCreateSection({
   heading = "Create tournament specific question",
   description = "This question will only be available on this tournament and will not appear in others.",
   submitLabel = "Add Question",
+  previewTournamentName,
   onSave,
   onCancel,
 }: TournamentQuestionCreateSectionProps) {
@@ -83,6 +85,8 @@ export function TournamentQuestionCreateSection({
           onChange={formik.handleChange}
           onBlur={formik.handleBlur}
           onStatusChange={(status) => void formik.setFieldValue("status", status)}
+          onTitleChange={(title) => void formik.setFieldValue("title", title)}
+          previewTournamentName={previewTournamentName}
         />
       </div>
 

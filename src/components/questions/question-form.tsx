@@ -8,7 +8,7 @@ import { ArrowLeft, ChevronDown } from "lucide-react";
 import { ErrorText } from "@/components/form/error-text";
 import { StatusCard, TournamentQuestionFields } from "@/components/questions/tournament-question-fields";
 import { api, ApiError } from "@/lib/api";
-import { GENERAL_CATEGORY_NAME, type Category, type Question, type QuestionType } from "@/lib/questions";
+import { GENERAL_CATEGORY_NAME, isQuizTournamentCategory, type Category, type Question, type QuestionType } from "@/lib/questions";
 import {
   questionInitialValues,
   questionPayloadFromValues,
@@ -76,6 +76,15 @@ export function QuestionForm({ question, categories, type = "player" }: Question
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [categories, isGeneral, formik.values.category_id]);
 
+  useEffect(() => {
+    if (!isTournament || formik.values.category_id) return;
+    const category = categories.find((item) => isQuizTournamentCategory(item.name));
+    if (category) {
+      void formik.setFieldValue("category_id", category.id, false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [categories, isTournament, formik.values.category_id]);
+
   function fieldError(name: keyof QuestionFormValues) {
     return formik.touched[name] ? formik.errors[name] : undefined;
   }
@@ -111,6 +120,7 @@ export function QuestionForm({ question, categories, type = "player" }: Question
               onChange={formik.handleChange}
               onBlur={formik.handleBlur}
               onStatusChange={(status) => void formik.setFieldValue("status", status)}
+              onTitleChange={(title) => void formik.setFieldValue("title", title)}
             />
           </div>
         ) : (

@@ -30,6 +30,23 @@ export function isQuizTournamentCategory(name: string) {
   return value.startsWith("quiz_tournament") || value.startsWith("quiz_tournmant");
 }
 
+export const TOURNAMENT_NAME_TOKEN = "{tournament}";
+
+export function fillTournamentTitle(title: string, tournamentName: string) {
+  const name = tournamentName.trim() || "this tournament";
+  return title.split(TOURNAMENT_NAME_TOKEN).join(name);
+}
+
+export function insertTournamentNameToken(title: string) {
+  if (title.includes(TOURNAMENT_NAME_TOKEN)) return title;
+  const trimmed = title.trim();
+  if (!trimmed) return TOURNAMENT_NAME_TOKEN;
+  if (trimmed.endsWith("?")) {
+    return `${trimmed.slice(0, -1).trimEnd()} ${TOURNAMENT_NAME_TOKEN}?`;
+  }
+  return `${trimmed} ${TOURNAMENT_NAME_TOKEN}`;
+}
+
 export async function fetchAllQuestions(params: {
   type: QuestionType;
   status?: QuestionStatus;

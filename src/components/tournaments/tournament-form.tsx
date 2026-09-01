@@ -11,12 +11,13 @@ import { ConfirmDeleteModal, openConfirm } from "@/components/ui/confirm-delete-
 import { api, ApiError } from "@/lib/api";
 import {
   fetchAllCategories,
+  fillTournamentTitle,
   isQuizTournamentCategory,
   type Category,
   type Question,
 } from "@/lib/questions";
 import type { Tournament } from "@/lib/tournaments";
-import { questionPayloadFromValues, type QuestionFormValues } from "@/validation/question";
+import { questionInitialValues, questionPayloadFromValues, type QuestionFormValues } from "@/validation/question";
 import {
   firstTournamentError,
   tournamentInitialValues,
@@ -259,7 +260,7 @@ export function TournamentForm({ templates, tournament }: TournamentFormProps) {
           {editing ? "Edit tournament" : "Add a new Tournament"}
         </h1>
         <p className="mt-1 text-sm text-zinc-500">
-          Enter a tournament name. Questions are optional and can be added later.
+          Enter a tournament name. Shared question templates will insert that name automatically.
         </p>
 
         {formik.status ? (
@@ -288,6 +289,11 @@ export function TournamentForm({ templates, tournament }: TournamentFormProps) {
         {showSpecificQuestion ? (
           <TournamentQuestionCreateSection
             categories={categories}
+            initialValues={{
+              ...questionInitialValues(),
+              category_id: selectedCategoryId,
+            }}
+            previewTournamentName={formik.values.name}
             onSave={addSpecificQuestion}
             onCancel={() => setShowSpecificQuestion(false)}
           />
@@ -308,6 +314,7 @@ export function TournamentForm({ templates, tournament }: TournamentFormProps) {
             heading="Edit tournament specific question"
             description="Update this question. It will still only be available on this tournament."
             submitLabel="Save Question"
+            previewTournamentName={formik.values.name}
             onSave={saveSpecificQuestion}
             onCancel={() => setEditingAnswer(null)}
           />
@@ -410,7 +417,7 @@ export function TournamentForm({ templates, tournament }: TournamentFormProps) {
             <textarea
               readOnly
               rows={3}
-              value={answer.title}
+              value={fillTournamentTitle(answer.title, formik.values.name)}
               className={`mt-4 ${inputClass} resize-none border-white/8 text-zinc-200`}
             />
 
