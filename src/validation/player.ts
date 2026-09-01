@@ -14,6 +14,7 @@ export type PlayerFormValues = {
   catches: string;
   most_dismissed_batter: string;
   most_dismissals_against_bowler: string;
+  most_dismissals_against_bowler_count: string;
   batting_avg_home_test: string;
   batting_avg_away_test: string;
   batting_avg_in_india_test: string;
@@ -84,7 +85,7 @@ const BOWLING_KEYS: (keyof FormatStats)[] = [
   "best_bowling_figures",
 ];
 
-const KEEPING_KEYS: (keyof FormatStats)[] = ["catches", "stumpings"];
+const KEEPING_KEYS: (keyof FormatStats)[] = ["stumpings"];
 
 const BATTING_TEST_KEYS = [
   "batting_avg_home_test",
@@ -159,6 +160,10 @@ export function playerInitialValues(player?: Player): PlayerFormValues {
     catches: player?.catches != null ? String(player.catches) : "",
     most_dismissed_batter: player?.most_dismissed_batter ?? "",
     most_dismissals_against_bowler: player?.most_dismissals_against_bowler ?? "",
+    most_dismissals_against_bowler_count:
+      player?.most_dismissals_against_bowler_count != null
+        ? String(player.most_dismissals_against_bowler_count)
+        : "",
     batting_avg_home_test: numToForm(player?.batting_avg_home_test),
     batting_avg_away_test: numToForm(player?.batting_avg_away_test),
     batting_avg_in_india_test: numToForm(player?.batting_avg_in_india_test),
@@ -309,6 +314,7 @@ export const playerSchema = Yup.object({
         .max(150, "Must be 150 characters or fewer"),
     otherwise: (schema) => schema.trim(),
   }),
+  most_dismissals_against_bowler_count: optionalWholeNumber("Enter a valid dismissal count"),
   batting_avg_home_test: optionalDecimal("Enter a valid batting average"),
   batting_avg_away_test: optionalDecimal("Enter a valid batting average"),
   batting_avg_in_india_test: optionalDecimal("Enter a valid batting average"),
@@ -416,6 +422,9 @@ export function playerPayloadFromValues(values: PlayerFormValues, photoUrl: stri
     catches: toNumber(values.catches, "int"),
     most_dismissed_batter: bowlingVisible ? values.most_dismissed_batter.trim() || null : null,
     most_dismissals_against_bowler: battingVisible ? values.most_dismissals_against_bowler.trim() : "",
+    most_dismissals_against_bowler_count: battingVisible
+      ? toNumber(values.most_dismissals_against_bowler_count, "int")
+      : null,
     status: values.status,
     odi: toFormatPayload(values.odi, values.role, "odi"),
     t20: toFormatPayload(values.t20, values.role, "t20"),

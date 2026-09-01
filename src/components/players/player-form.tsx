@@ -38,6 +38,7 @@ const FORMAT_ROWS: FormatRow[] = [
   { key: "last_match_team", label: "Last Match against which team?", placeholder: "Select team", group: "common", input: "team" },
   { key: "matches", label: "Number of matches", placeholder: "Enter number of matches", group: "common" },
   { key: "man_of_the_match", label: "Number of Man of the match awards", placeholder: "Enter man of the match awards", group: "common" },
+  { key: "catches", label: "Number of catches", placeholder: "Enter number of catches", group: "common" },
   { key: "runs", label: "Number of runs", placeholder: "Enter runs", group: "batting" },
   { key: "batting_average", label: "Batting average", placeholder: "Enter average", group: "batting" },
   { key: "batting_strike_rate", label: "Batting Strike rate", placeholder: "Enter strike rate", group: "batting" },
@@ -51,7 +52,6 @@ const FORMAT_ROWS: FormatRow[] = [
   { key: "bowling_strike_rate", label: "Bowling strike rate", placeholder: "Enter strike rate", group: "bowling" },
   { key: "bowling_average", label: "Bowling average", placeholder: "Enter average", group: "bowling" },
   { key: "wicket_hauls", label: "Number of 5 wicket hauls", placeholder: "Enter number of 5 wicket hauls", group: "bowling" },
-  { key: "catches", label: "Number of catches", placeholder: "Enter number of catches", group: "keeping" },
   { key: "stumpings", label: "Number of stumpings", placeholder: "Enter number of stumpings", group: "keeping" },
 ];
 
@@ -398,16 +398,6 @@ export function PlayerForm({ player }: PlayerFormProps) {
           <option value="yes">Yes</option>
           <option value="no">No</option>
         </SelectField>
-        <Field label="Number of catches" error={fieldError("catches")}>
-          <input
-            name="catches"
-            className={inputClassName(fieldError("catches"))}
-            value={formik.values.catches}
-            onChange={formik.handleChange}
-            onBlur={formik.handleBlur}
-            placeholder="Enter number of catches"
-          />
-        </Field>
       </div>
 
       <div className="mt-8 space-y-6">
@@ -464,6 +454,19 @@ export function PlayerForm({ player }: PlayerFormProps) {
                 onChange={formik.handleChange}
                 onBlur={formik.handleBlur}
                 placeholder="Enter player name"
+              />
+            </Field>
+            <Field
+              label="Most Dismissals Against Bowler - Count"
+              error={fieldError("most_dismissals_against_bowler_count")}
+            >
+              <input
+                name="most_dismissals_against_bowler_count"
+                className={inputClassName(fieldError("most_dismissals_against_bowler_count"))}
+                value={formik.values.most_dismissals_against_bowler_count}
+                onChange={formik.handleChange}
+                onBlur={formik.handleBlur}
+                placeholder="Enter number of dismissals"
               />
             </Field>
             <PairFields

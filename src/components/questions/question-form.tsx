@@ -7,6 +7,7 @@ import { useFormik } from "formik";
 import { ArrowLeft, ChevronDown } from "lucide-react";
 import { ErrorText } from "@/components/form/error-text";
 import { StatusCard, TournamentQuestionFields } from "@/components/questions/tournament-question-fields";
+import { PlayerQuestionTitle } from "@/components/questions/player-question-title";
 import { api, ApiError } from "@/lib/api";
 import { GENERAL_CATEGORY_NAME, isQuizTournamentCategory, type Category, type Question, type QuestionType } from "@/lib/questions";
 import {
@@ -35,6 +36,7 @@ export function QuestionForm({ question, categories, type = "player" }: Question
   const editing = Boolean(question);
   const isGeneral = type === "general";
   const isTournament = type === "tournament";
+  const isPlayer = type === "player";
   const listHref =
     type === "general" ? "/questions/general" : type === "tournament" ? "/questions/tournament" : "/questions/player";
 
@@ -126,30 +128,40 @@ export function QuestionForm({ question, categories, type = "player" }: Question
         ) : (
           <>
             <div className="mt-8">
-              <label className="block">
-                <span className={labelClass}>
-                  Question Title<span className="text-red-400">*</span>
-                </span>
-                <p className="mb-3 text-sm text-zinc-500">
-                  Enter the question exactly as it will appear to users.
-                </p>
-                <textarea
-                  name="title"
-                  rows={4}
-                  value={formik.values.title}
+              {isPlayer ? (
+                <PlayerQuestionTitle
+                  title={formik.values.title}
+                  error={fieldError("title")}
                   onChange={formik.handleChange}
                   onBlur={formik.handleBlur}
-                  placeholder={
-                    isGeneral
-                      ? "e.g. Who won the 2023 ODI World Cup?"
-                      : "e.g. Which of these players has the highest batting average (odi/test/t20) ?"
-                  }
-                  className={`${inputClass} resize-none ${
-                    fieldError("title") ? "border-red-500/50" : "border-white/8"
-                  }`}
+                  onTitleChange={(title) => void formik.setFieldValue("title", title)}
                 />
-                <ErrorText message={fieldError("title")} />
-              </label>
+              ) : (
+                <label className="block">
+                  <span className={labelClass}>
+                    Question Title<span className="text-red-400">*</span>
+                  </span>
+                  <p className="mb-3 text-sm text-zinc-500">
+                    Enter the question exactly as it will appear to users.
+                  </p>
+                  <textarea
+                    name="title"
+                    rows={4}
+                    value={formik.values.title}
+                    onChange={formik.handleChange}
+                    onBlur={formik.handleBlur}
+                    placeholder={
+                      isGeneral
+                        ? "e.g. Who won the 2023 ODI World Cup?"
+                        : "e.g. Which of these players has the highest batting average (odi/test/t20) ?"
+                    }
+                    className={`${inputClass} resize-none ${
+                      fieldError("title") ? "border-red-500/50" : "border-white/8"
+                    }`}
+                  />
+                  <ErrorText message={fieldError("title")} />
+                </label>
+              )}
             </div>
 
             {isGeneral ? (

@@ -40,6 +40,7 @@ export type Player = {
   catches: number | null;
   most_dismissed_batter: string | null;
   most_dismissals_against_bowler: string;
+  most_dismissals_against_bowler_count: number | null;
   batting_avg_home_test: number | null;
   batting_avg_away_test: number | null;
   batting_avg_in_india_test: number | null;
@@ -112,6 +113,7 @@ export type PlayerPayload = {
   catches?: number | null;
   most_dismissed_batter?: string | null;
   most_dismissals_against_bowler: string;
+  most_dismissals_against_bowler_count?: number | null;
   batting_avg_home_test?: number | null;
   batting_avg_away_test?: number | null;
   batting_avg_in_india_test?: number | null;

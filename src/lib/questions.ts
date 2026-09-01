@@ -31,6 +31,27 @@ export function isQuizTournamentCategory(name: string) {
 }
 
 export const TOURNAMENT_NAME_TOKEN = "{tournament}";
+export const FORMAT_NAME_TOKEN = "{format}";
+export const COUNTRY_NAME_TOKEN = "{country}";
+
+export const FORMAT_QUESTION_PHRASES = {
+  odi: "ODIs",
+  t20: "T20 Internationals",
+  test: "Test cricket",
+} as const;
+
+export const PLAYER_QUESTION_FORMATS = ["odi", "t20", "test"] as const;
+export type PlayerQuestionFormat = (typeof PLAYER_QUESTION_FORMATS)[number];
+
+export function insertTitleToken(title: string, token: string) {
+  if (title.includes(token)) return title;
+  const trimmed = title.trim();
+  if (!trimmed) return token;
+  if (trimmed.endsWith("?")) {
+    return `${trimmed.slice(0, -1).trimEnd()} ${token}?`;
+  }
+  return `${trimmed} ${token}`;
+}
 
 export function fillTournamentTitle(title: string, tournamentName: string) {
   const name = tournamentName.trim() || "this tournament";
@@ -38,13 +59,36 @@ export function fillTournamentTitle(title: string, tournamentName: string) {
 }
 
 export function insertTournamentNameToken(title: string) {
-  if (title.includes(TOURNAMENT_NAME_TOKEN)) return title;
-  const trimmed = title.trim();
-  if (!trimmed) return TOURNAMENT_NAME_TOKEN;
-  if (trimmed.endsWith("?")) {
-    return `${trimmed.slice(0, -1).trimEnd()} ${TOURNAMENT_NAME_TOKEN}?`;
+  return insertTitleToken(title, TOURNAMENT_NAME_TOKEN);
+}
+
+export function fillPlayerQuestionTitle(
+  title: string,
+  options?: { format?: PlayerQuestionFormat | string; country?: string },
+) {
+  let out = title;
+  const format = options?.format;
+  if (format) {
+    const phrase =
+      format in FORMAT_QUESTION_PHRASES
+        ? FORMAT_QUESTION_PHRASES[format as PlayerQuestionFormat]
+        : format;
+    out = out.split(FORMAT_NAME_TOKEN).join(phrase);
   }
-  return `${trimmed} ${TOURNAMENT_NAME_TOKEN}`;
+  const country = options?.country?.trim();
+  if (country) {
+    out = out.split(COUNTRY_NAME_TOKEN).join(country);
+    out = out.split("{country_name}").join(country);
+  }
+  return out;
+}
+
+export function insertFormatToken(title: string) {
+  return insertTitleToken(title, FORMAT_NAME_TOKEN);
+}
+
+export function insertCountryToken(title: string) {
+  return insertTitleToken(title, COUNTRY_NAME_TOKEN);
 }
 
 export async function fetchAllQuestions(params: {
