@@ -20,6 +20,7 @@ export type FormatStats = {
   wickets: number | null;
   bowling_average: number | null;
   bowling_strike_rate: number | null;
+  bowling_economy: number | null;
   wicket_hauls: number | null;
   best_bowling_figures: string | null;
   man_of_the_match: number | null;

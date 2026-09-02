@@ -83,7 +83,8 @@ export function TopBar({ onMenuClick }: TopBarProps) {
     pathname === "/questions/tournament" ||
     pathname === "/tournaments" ||
     pathname === "/categories" ||
-    pathname === "/games"
+    pathname === "/games" ||
+    pathname.startsWith("/games/")
   ) {
     return null;
   }

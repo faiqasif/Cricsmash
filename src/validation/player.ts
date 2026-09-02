@@ -81,11 +81,12 @@ const BOWLING_KEYS: (keyof FormatStats)[] = [
   "wickets",
   "bowling_average",
   "bowling_strike_rate",
+  "bowling_economy",
   "wicket_hauls",
   "best_bowling_figures",
 ];
 
-const KEEPING_KEYS: (keyof FormatStats)[] = ["stumpings"];
+const KEEPING_KEYS: (keyof FormatStats)[] = ["catches", "stumpings"];
 
 const BATTING_TEST_KEYS = [
   "batting_avg_home_test",
@@ -131,6 +132,7 @@ export const emptyFormat = (): FormFormat => ({
   wickets: "",
   bowling_average: "",
   bowling_strike_rate: "",
+  bowling_economy: "",
   wicket_hauls: "",
   best_bowling_figures: "",
   man_of_the_match: "",
@@ -258,6 +260,7 @@ const formatSchema = Yup.object({
   wickets: optionalWholeNumber("Enter a valid wicket count"),
   bowling_average: optionalDecimal("Enter a valid bowling average"),
   bowling_strike_rate: optionalDecimal("Enter a valid bowling strike rate"),
+  bowling_economy: optionalDecimal("Enter a valid economy rate", 0, 50),
   wicket_hauls: optionalWholeNumber("Enter a valid wicket hauls count"),
   best_bowling_figures: optionalText(20),
   man_of_the_match: optionalWholeNumber("Enter a valid awards count"),
@@ -371,6 +374,7 @@ const FORMAT_KINDS: Record<keyof FormatStats, "int" | "float" | "text"> = {
   wickets: "int",
   bowling_average: "float",
   bowling_strike_rate: "float",
+  bowling_economy: "float",
   wicket_hauls: "int",
   best_bowling_figures: "text",
   man_of_the_match: "int",
@@ -410,6 +414,7 @@ function toFormatPayload(form: FormFormat, role: string, format: "odi" | "t20" |
 export function playerPayloadFromValues(values: PlayerFormValues, photoUrl: string | null): PlayerPayload {
   const battingVisible = showsBatting(values.role);
   const bowlingVisible = showsBowling(values.role);
+  const keepingVisible = showsKeeping(values.role);
   const payload: PlayerPayload = {
     name: values.name.trim(),
     country: values.country,
@@ -419,7 +424,7 @@ export function playerPayloadFromValues(values: PlayerFormValues, photoUrl: stri
     photo_url: photoUrl,
     tournaments_won: toNumber(values.tournaments_won, "int"),
     captained_international: values.captain === "" ? null : values.captain === "yes",
-    catches: toNumber(values.catches, "int"),
+    catches: keepingVisible ? toNumber(values.catches, "int") : null,
     most_dismissed_batter: bowlingVisible ? values.most_dismissed_batter.trim() || null : null,
     most_dismissals_against_bowler: battingVisible ? values.most_dismissals_against_bowler.trim() : "",
     most_dismissals_against_bowler_count: battingVisible

@@ -38,7 +38,6 @@ const FORMAT_ROWS: FormatRow[] = [
   { key: "last_match_team", label: "Last Match against which team?", placeholder: "Select team", group: "common", input: "team" },
   { key: "matches", label: "Number of matches", placeholder: "Enter number of matches", group: "common" },
   { key: "man_of_the_match", label: "Number of Man of the match awards", placeholder: "Enter man of the match awards", group: "common" },
-  { key: "catches", label: "Number of catches", placeholder: "Enter number of catches", group: "common" },
   { key: "runs", label: "Number of runs", placeholder: "Enter runs", group: "batting" },
   { key: "batting_average", label: "Batting average", placeholder: "Enter average", group: "batting" },
   { key: "batting_strike_rate", label: "Batting Strike rate", placeholder: "Enter strike rate", group: "batting" },
@@ -50,8 +49,10 @@ const FORMAT_ROWS: FormatRow[] = [
   { key: "batting_position", label: "Which batting position did he bat the most number of times?", placeholder: "Position 1-11", group: "batting", formats: ["odi", "test"] },
   { key: "wickets", label: "Number of wickets", placeholder: "Enter number of wickets", group: "bowling" },
   { key: "bowling_strike_rate", label: "Bowling strike rate", placeholder: "Enter strike rate", group: "bowling" },
+  { key: "bowling_economy", label: "Economy Rate", placeholder: "Enter economy rate", group: "bowling" },
   { key: "bowling_average", label: "Bowling average", placeholder: "Enter average", group: "bowling" },
   { key: "wicket_hauls", label: "Number of 5 wicket hauls", placeholder: "Enter number of 5 wicket hauls", group: "bowling" },
+  { key: "catches", label: "Number of catches", placeholder: "Enter number of catches", group: "keeping" },
   { key: "stumpings", label: "Number of stumpings", placeholder: "Enter number of stumpings", group: "keeping" },
 ];
 
