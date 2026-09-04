@@ -12,7 +12,7 @@ import { api, ApiError } from "@/lib/api";
 import {
   fetchAllCategories,
   fillTournamentTitle,
-  isQuizTournamentCategory,
+  tournamentQuestionCategories,
   type Category,
   type Question,
 } from "@/lib/questions";
@@ -85,23 +85,23 @@ export function TournamentForm({ templates, tournament }: TournamentFormProps) {
       .catch(() => setCategories([]));
   }, []);
 
+  const questionCategories = useMemo(
+    () => tournamentQuestionCategories(categories),
+    [categories],
+  );
+
   const quizCategories = useMemo(() => {
     const byId = new Map<string, { id: string; name: string }>();
-    for (const category of categories) {
-      if (isQuizTournamentCategory(category.name)) {
-        byId.set(category.id, { id: category.id, name: category.name });
-      }
-    }
     for (const template of templates) {
-      if (isQuizTournamentCategory(template.category_name)) {
+      if (template.category_id && template.category_name) {
         byId.set(template.category_id, { id: template.category_id, name: template.category_name });
       }
     }
     for (const answer of formik.values.answers) {
-      if (!answer.is_new && !answer.is_specific) continue;
+      if (!answer.category_id) continue;
       const category = categories.find((item) => item.id === answer.category_id);
       const name = category?.name || answer.category_name;
-      if (answer.category_id && name) {
+      if (name) {
         byId.set(answer.category_id, { id: answer.category_id, name });
       }
     }
@@ -288,7 +288,7 @@ export function TournamentForm({ templates, tournament }: TournamentFormProps) {
 
         {showSpecificQuestion ? (
           <TournamentQuestionCreateSection
-            categories={categories}
+            categories={questionCategories}
             initialValues={{
               ...questionInitialValues(),
               category_id: selectedCategoryId,
@@ -300,7 +300,7 @@ export function TournamentForm({ templates, tournament }: TournamentFormProps) {
         ) : editingAnswer ? (
           <TournamentQuestionCreateSection
             key={editingAnswer.client_id}
-            categories={categories}
+            categories={questionCategories}
             initialValues={{
               title: editingAnswer.title,
               category_id: editingAnswer.category_id,
@@ -338,7 +338,7 @@ export function TournamentForm({ templates, tournament }: TournamentFormProps) {
           <div className="mt-8">
             <p className={labelClass}>Category</p>
             <p className="mb-3 text-sm text-zinc-500">
-              Select a Quiz Tournament category to see its questions.
+              Select a category from Tournament Questions to see its templates.
             </p>
             <div className="flex flex-wrap gap-2">
               {quizCategories.map((category) => {
@@ -362,12 +362,11 @@ export function TournamentForm({ templates, tournament }: TournamentFormProps) {
           </div>
         ) : (
           <p className="mt-8 rounded-2xl border border-white/8 bg-[#121218] px-5 py-4 text-sm text-zinc-400">
-            No Quiz Tournament categories yet. Create a category whose name starts with{" "}
-            <span className="text-white">Quiz Tournament</span>, then{" "}
+            No tournament question templates yet.{" "}
             <Link href="/questions/tournament/new" className="text-purple hover:underline">
-              add tournament questions
-            </Link>{" "}
-            to it.
+              Add them in Tournament Questions
+            </Link>
+            , then return here to fill answers.
           </p>
         )}
 

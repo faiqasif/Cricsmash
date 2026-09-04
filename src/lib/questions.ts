@@ -30,6 +30,12 @@ export function isQuizTournamentCategory(name: string) {
   return value.startsWith("quiz_tournament") || value.startsWith("quiz_tournmant");
 }
 
+export function tournamentQuestionCategories(categories: Category[]) {
+  return categories.filter(
+    (item) => item.name.trim().toLowerCase() !== GENERAL_CATEGORY_NAME.toLowerCase(),
+  );
+}
+
 export const TOURNAMENT_NAME_TOKEN = "{tournament}";
 export const FORMAT_NAME_TOKEN = "{format}";
 export const COUNTRY_NAME_TOKEN = "{country}";

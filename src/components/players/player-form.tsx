@@ -211,8 +211,16 @@ export function PlayerForm({ player }: PlayerFormProps) {
         "wickets_in_australia",
         "wickets_in_england",
         "wickets_in_south_africa",
+        "odi_wc_wickets",
+        "odi_wc_bowling_strike_rate",
+        "t20_wc_wickets",
+        "t20_wc_bowling_strike_rate",
       ] as const) {
         void formik.setFieldValue(key, "");
+      }
+      if (!showsBatting(next)) {
+        void formik.setFieldValue("odi_wc_player_of_match", "");
+        void formik.setFieldValue("t20_wc_player_of_match", "");
       }
     }
     if (!showsBatting(next)) {
@@ -228,8 +236,35 @@ export function PlayerForm({ player }: PlayerFormProps) {
         "batting_avg_vs_australia_test",
         "batting_avg_vs_england_test",
         "batting_avg_vs_south_africa_test",
+        "hundreds_vs_india_test",
+        "hundreds_vs_australia_test",
+        "hundreds_vs_england_test",
+        "hundreds_vs_south_africa_test",
+        "hundreds_in_india_test",
+        "hundreds_in_australia_test",
+        "hundreds_in_england_test",
+        "hundreds_in_south_africa_test",
+        "hundreds_vs_india_odi",
+        "hundreds_vs_australia_odi",
+        "hundreds_vs_england_odi",
+        "hundreds_vs_south_africa_odi",
+        "balls_played_test",
+        "odi_wc_batting_average",
+        "odi_wc_strike_rate",
+        "odi_wc_hundreds",
+        "odi_wc_fifties",
+        "odi_wc_highest_score",
+        "t20_wc_batting_average",
+        "t20_wc_strike_rate",
+        "t20_wc_hundreds",
+        "t20_wc_fifties",
+        "t20_wc_highest_score",
       ] as const) {
         void formik.setFieldValue(key, "");
+      }
+      if (!showsBowling(next)) {
+        void formik.setFieldValue("odi_wc_player_of_match", "");
+        void formik.setFieldValue("t20_wc_player_of_match", "");
       }
     }
   }
@@ -445,6 +480,19 @@ export function PlayerForm({ player }: PlayerFormProps) {
               />
             ) : null}
             <Field
+              label="Number of balls played in Test cricket"
+              error={fieldError("balls_played_test")}
+            >
+              <input
+                name="balls_played_test"
+                className={inputClassName(fieldError("balls_played_test"))}
+                value={formik.values.balls_played_test}
+                onChange={formik.handleChange}
+                onBlur={formik.handleBlur}
+                placeholder="Enter number of balls"
+              />
+            </Field>
+            <Field
               label="Most dismissals against which bowler in International cricket?"
               error={fieldError("most_dismissals_against_bowler")}
             >
@@ -509,6 +557,45 @@ export function PlayerForm({ player }: PlayerFormProps) {
               onChange={formik.handleChange}
               onBlur={formik.handleBlur}
             />
+            <CountryFields
+              label="No of hundreds vs India, Australia, England, South Africa in Tests"
+              names={{
+                India: "hundreds_vs_india_test",
+                Australia: "hundreds_vs_australia_test",
+                England: "hundreds_vs_england_test",
+                "South Africa": "hundreds_vs_south_africa_test",
+              }}
+              values={formik.values}
+              fieldError={fieldError}
+              onChange={formik.handleChange}
+              onBlur={formik.handleBlur}
+            />
+            <CountryFields
+              label="No of hundreds in India, Australia, England, South Africa in Tests"
+              names={{
+                India: "hundreds_in_india_test",
+                Australia: "hundreds_in_australia_test",
+                England: "hundreds_in_england_test",
+                "South Africa": "hundreds_in_south_africa_test",
+              }}
+              values={formik.values}
+              fieldError={fieldError}
+              onChange={formik.handleChange}
+              onBlur={formik.handleBlur}
+            />
+            <CountryFields
+              label="No of hundreds vs India, Australia, England, South Africa in ODIs"
+              names={{
+                India: "hundreds_vs_india_odi",
+                Australia: "hundreds_vs_australia_odi",
+                England: "hundreds_vs_england_odi",
+                "South Africa": "hundreds_vs_south_africa_odi",
+              }}
+              values={formik.values}
+              fieldError={fieldError}
+              onChange={formik.handleChange}
+              onBlur={formik.handleBlur}
+            />
             <FormatStatRow
               row={BATTING_POSITION_ROW}
               formats={formats}
@@ -528,6 +615,36 @@ export function PlayerForm({ player }: PlayerFormProps) {
                 onDelete={() => openConfirm(setPendingDelete, field)}
               />
             ))}
+            <WorldCupSection
+              title="ODI World cup Stats"
+              fields={[
+                { name: "odi_wc_batting_average", label: "Batting average" },
+                { name: "odi_wc_strike_rate", label: "Strike rate" },
+                { name: "odi_wc_hundreds", label: "No of 100s" },
+                { name: "odi_wc_fifties", label: "No of 50s" },
+                { name: "odi_wc_player_of_match", label: "Player of the Match awards" },
+                { name: "odi_wc_highest_score", label: "Highest Score" },
+              ]}
+              values={formik.values}
+              fieldError={fieldError}
+              onChange={formik.handleChange}
+              onBlur={formik.handleBlur}
+            />
+            <WorldCupSection
+              title="T20 World cup stats"
+              fields={[
+                { name: "t20_wc_batting_average", label: "Batting average" },
+                { name: "t20_wc_strike_rate", label: "Strike rate" },
+                { name: "t20_wc_hundreds", label: "No of 100s" },
+                { name: "t20_wc_fifties", label: "No of 50s" },
+                { name: "t20_wc_player_of_match", label: "Player of the Match awards" },
+                { name: "t20_wc_highest_score", label: "Highest Score" },
+              ]}
+              values={formik.values}
+              fieldError={fieldError}
+              onChange={formik.handleChange}
+              onBlur={formik.handleBlur}
+            />
           </section>
         ) : null}
 
@@ -618,6 +735,30 @@ export function PlayerForm({ player }: PlayerFormProps) {
                 onDelete={() => openConfirm(setPendingDelete, field)}
               />
             ))}
+            <WorldCupSection
+              title="ODI World cup Stats"
+              fields={[
+                { name: "odi_wc_wickets", label: "No of wickets" },
+                { name: "odi_wc_bowling_strike_rate", label: "Bowling strike rate" },
+                { name: "odi_wc_player_of_match", label: "Player of the Match awards" },
+              ]}
+              values={formik.values}
+              fieldError={fieldError}
+              onChange={formik.handleChange}
+              onBlur={formik.handleBlur}
+            />
+            <WorldCupSection
+              title="T20 World cup stats"
+              fields={[
+                { name: "t20_wc_wickets", label: "No of wickets" },
+                { name: "t20_wc_bowling_strike_rate", label: "Bowling strike rate" },
+                { name: "t20_wc_player_of_match", label: "Player of the Match awards" },
+              ]}
+              values={formik.values}
+              fieldError={fieldError}
+              onChange={formik.handleChange}
+              onBlur={formik.handleBlur}
+            />
           </section>
         ) : null}
 
@@ -894,6 +1035,43 @@ function PairFields({
           onBlur={onBlur}
         />
       </div>
+    </div>
+  );
+}
+
+function WorldCupSection({
+  title,
+  fields,
+  values,
+  fieldError,
+  onChange,
+  onBlur,
+}: {
+  title: string;
+  fields: { name: keyof PlayerFormValues; label: string }[];
+  values: PlayerFormValues;
+  fieldError: (name: string) => string | undefined;
+  onChange: React.ChangeEventHandler<HTMLInputElement>;
+  onBlur: React.FocusEventHandler<HTMLInputElement>;
+}) {
+  return (
+    <div className="space-y-6 pt-2">
+      <h3 className="text-lg font-semibold text-white">{title}</h3>
+      {fields.map((field) => {
+        const raw = values[field.name];
+        return (
+          <Field key={String(field.name)} label={field.label} error={fieldError(String(field.name))}>
+            <input
+              name={String(field.name)}
+              className={inputClassName(fieldError(String(field.name)))}
+              value={typeof raw === "string" ? raw : ""}
+              onChange={onChange}
+              onBlur={onBlur}
+              placeholder="Enter value"
+            />
+          </Field>
+        );
+      })}
     </div>
   );
 }

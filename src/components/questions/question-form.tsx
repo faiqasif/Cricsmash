@@ -9,7 +9,7 @@ import { ErrorText } from "@/components/form/error-text";
 import { StatusCard, TournamentQuestionFields } from "@/components/questions/tournament-question-fields";
 import { PlayerQuestionTitle } from "@/components/questions/player-question-title";
 import { api, ApiError } from "@/lib/api";
-import { GENERAL_CATEGORY_NAME, isQuizTournamentCategory, type Category, type Question, type QuestionType } from "@/lib/questions";
+import { GENERAL_CATEGORY_NAME, isQuizTournamentCategory, tournamentQuestionCategories, type Category, type Question, type QuestionType } from "@/lib/questions";
 import {
   questionInitialValues,
   questionPayloadFromValues,
@@ -37,6 +37,7 @@ export function QuestionForm({ question, categories, type = "player" }: Question
   const isGeneral = type === "general";
   const isTournament = type === "tournament";
   const isPlayer = type === "player";
+  const tournamentCategories = isTournament ? tournamentQuestionCategories(categories) : categories;
   const listHref =
     type === "general" ? "/questions/general" : type === "tournament" ? "/questions/tournament" : "/questions/player";
 
@@ -117,7 +118,7 @@ export function QuestionForm({ question, categories, type = "player" }: Question
           <div className="mt-8">
             <TournamentQuestionFields
               values={formik.values}
-              categories={categories}
+              categories={tournamentCategories}
               fieldError={fieldError}
               onChange={formik.handleChange}
               onBlur={formik.handleBlur}
