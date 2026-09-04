@@ -141,7 +141,7 @@ export default function DailyQuizDetailPage() {
                 <div className="mt-4 grid gap-3 sm:grid-cols-2">
                   {item.options.map((option, index) => (
                     <div
-                      key={option.player_id}
+                      key={option.player_id || `${item.id}-${index}`}
                       className={`flex items-center gap-3 rounded-full border px-4 py-3 ${
                         option.correct
                           ? "border-emerald-400/40 bg-emerald-500/15 text-emerald-200"

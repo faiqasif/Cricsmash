@@ -10,6 +10,8 @@ import {
   FORMAT_QUESTION_PHRASES,
   insertCountryToken,
   insertFormatToken,
+  insertPlayerNameToken,
+  PLAYER_NAME_TOKEN,
   PLAYER_QUESTION_FORMATS,
 } from "@/lib/questions";
 
@@ -34,14 +36,21 @@ export function PlayerQuestionTitle({
 }: PlayerQuestionTitleProps) {
   const hasFormat = title.includes(FORMAT_NAME_TOKEN);
   const hasCountry = title.includes(COUNTRY_NAME_TOKEN);
+  const hasPlayerName = title.includes(PLAYER_NAME_TOKEN);
   const sampleCountry = TEST_COUNTRIES[0];
+  const samplePlayer = "Virat Kohli";
+
+  const previewOptions = {
+    country: sampleCountry,
+    playerName: samplePlayer,
+  };
 
   const previews = hasFormat
     ? PLAYER_QUESTION_FORMATS.map((format) =>
-        fillPlayerQuestionTitle(title, { format, country: sampleCountry }),
+        fillPlayerQuestionTitle(title, { ...previewOptions, format }),
       )
-    : hasCountry
-      ? TEST_COUNTRIES.map((country) => fillPlayerQuestionTitle(title, { country }))
+    : hasCountry || hasPlayerName
+      ? [fillPlayerQuestionTitle(title, previewOptions)]
       : title.trim()
         ? [title]
         : [];
@@ -53,12 +62,13 @@ export function PlayerQuestionTitle({
           Question Title<span className="text-red-400">*</span>
         </span>
         <p className="mb-3 text-sm text-zinc-500">
-          Write the question once. Do not put ODI, T20, or Test in the text. Insert{" "}
-          <span className="font-medium text-white">{FORMAT_NAME_TOKEN}</span> where the format
-          should appear — the daily quiz will reuse this template once for ODIs, once for T20
-          Internationals, and once for Test cricket. Use{" "}
-          <span className="font-medium text-white">{COUNTRY_NAME_TOKEN}</span> for India,
-          Australia, England, or South Africa.
+          Comparison questions pick four players. Insert{" "}
+          <span className="font-medium text-white">{FORMAT_NAME_TOKEN}</span> to reuse the
+          template for ODIs, T20 Internationals, and Test cricket. Stats questions name one
+          player: insert <span className="font-medium text-white">{PLAYER_NAME_TOKEN}</span>{" "}
+          and write the format in the title if needed. Use{" "}
+          <span className="font-medium text-white">{COUNTRY_NAME_TOKEN}</span> for a country
+          (the player’s home country on stats questions).
         </p>
         <textarea
           name="title"
@@ -66,12 +76,19 @@ export function PlayerQuestionTitle({
           value={title}
           onChange={onChange}
           onBlur={onBlur}
-          placeholder={`e.g. Among these batters, who has scored the most runs in ${FORMAT_NAME_TOKEN}?`}
+          placeholder={`e.g. What is the batting average of ${PLAYER_NAME_TOKEN} in ODIs?`}
           className={`${inputClass} resize-none ${error ? "border-red-500/50" : "border-white/8"}`}
         />
         <ErrorText message={error} />
       </label>
       <div className="mt-3 flex flex-wrap gap-x-4 gap-y-2">
+        <button
+          type="button"
+          onClick={() => onTitleChange(insertPlayerNameToken(title))}
+          className="text-sm font-medium text-purple hover:underline"
+        >
+          Insert player name
+        </button>
         <button
           type="button"
           onClick={() => onTitleChange(insertFormatToken(title))}
@@ -94,18 +111,18 @@ export function PlayerQuestionTitle({
             {hasFormat
               ? PLAYER_QUESTION_FORMATS.map((format) => (
                   <li key={format}>
-                    {fillPlayerQuestionTitle(title, { format, country: sampleCountry })}
+                    {fillPlayerQuestionTitle(title, { ...previewOptions, format })}
                   </li>
                 ))
               : previews.map((item) => (
                   <li key={item}>{item}</li>
                 ))}
           </ul>
-          {hasFormat || hasCountry ? null : (
+          {hasFormat || hasCountry || hasPlayerName ? null : (
             <p className="mt-2 text-zinc-500">
-              Add {FORMAT_NAME_TOKEN} so the same template can be used for{" "}
-              {FORMAT_QUESTION_PHRASES.odi}, {FORMAT_QUESTION_PHRASES.t20}, and{" "}
-              {FORMAT_QUESTION_PHRASES.test}.
+              Add {PLAYER_NAME_TOKEN} for a single-player stats question, or {FORMAT_NAME_TOKEN}{" "}
+              so a comparison template can be used for {FORMAT_QUESTION_PHRASES.odi},{" "}
+              {FORMAT_QUESTION_PHRASES.t20}, and {FORMAT_QUESTION_PHRASES.test}.
             </p>
           )}
         </div>

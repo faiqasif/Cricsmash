@@ -11,6 +11,7 @@ import { ApiError } from "@/lib/api";
 import {
   answerDailyQuizItem,
   getTodayDailyQuiz,
+  isPlayerStatItem,
   type DailyQuiz,
   type DailyQuizAnswer,
   type DailyQuizItem,
@@ -148,7 +149,9 @@ export default function DailyQuizDemoPage() {
                   },
                 }));
                 try {
-                  const result = await answerDailyQuizItem(item.id, selectedId);
+                  const result = isPlayerStatItem(item)
+                    ? await answerDailyQuizItem(item.id, undefined, Number.parseInt(selectedId, 10))
+                    : await answerDailyQuizItem(item.id, selectedId);
                   setItemState((current) => ({
                     ...current,
                     [item.id]: {
@@ -220,16 +223,22 @@ function QuizCard({
       </div>
 
       <div className="mt-5 grid gap-3 sm:grid-cols-2">
-        {item.options.map((player) => {
-          const selected = state?.selectedId === player.player_id;
-          const isCorrect = result?.correct_player_ids.includes(player.player_id) ?? false;
+        {item.options.map((player, index) => {
+          const optionKey = player.player_id || String(player.option ?? index + 1);
+          const selected = state?.selectedId === optionKey;
+          const isCorrect = result
+            ? player.player_id
+              ? Boolean(result.correct_player_ids?.includes(player.player_id))
+              : result.correct_option === (player.option ?? index + 1)
+            : false;
           const isWrongPick = Boolean(result) && selected && !isCorrect;
+          const statOption = !player.player_id;
           return (
             <button
-              key={player.player_id}
+              key={optionKey}
               type="button"
               disabled={locked}
-              onClick={() => onSelect(player.player_id)}
+              onClick={() => onSelect(optionKey)}
               className={`flex items-center gap-3 rounded-2xl border px-4 py-3 text-left transition ${
                 isCorrect
                   ? "border-green/50 bg-green/10"
@@ -240,7 +249,11 @@ function QuizCard({
                       : "border-white/8 bg-[#121218] hover:border-white/20"
               }`}
             >
-              {player.photo_url ? (
+              {statOption ? (
+                <span className="flex size-11 items-center justify-center rounded-full bg-purple-soft text-sm font-semibold text-purple">
+                  {["A", "B", "C", "D"][index] ?? index + 1}
+                </span>
+              ) : player.photo_url ? (
                 <Image
                   src={player.photo_url}
                   alt={player.name}
@@ -255,16 +268,18 @@ function QuizCard({
               )}
               <span className="min-w-0">
                 <span className="block truncate font-medium text-white">{player.name}</span>
-                <span className="mt-1 flex items-center gap-2 text-sm text-zinc-400">
-                  <Image
-                    src={flagUrl(player.country)}
-                    alt=""
-                    width={20}
-                    height={14}
-                    className="h-3.5 w-5 rounded-sm object-cover"
-                  />
-                  {player.country}
-                </span>
+                {statOption || !player.country ? null : (
+                  <span className="mt-1 flex items-center gap-2 text-sm text-zinc-400">
+                    <Image
+                      src={flagUrl(player.country)}
+                      alt=""
+                      width={20}
+                      height={14}
+                      className="h-3.5 w-5 rounded-sm object-cover"
+                    />
+                    {player.country}
+                  </span>
+                )}
               </span>
             </button>
           );

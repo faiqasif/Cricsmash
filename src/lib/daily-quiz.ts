@@ -9,6 +9,7 @@ export type DailyQuizPlayer = {
   photo_url: string | null;
   value?: string;
   correct?: boolean;
+  option?: number;
 };
 
 export type DailyQuizItem = {
@@ -16,6 +17,7 @@ export type DailyQuizItem = {
   title: string;
   format: string;
   metric?: string;
+  kind?: "player_stat";
   options: DailyQuizPlayer[];
 };
 
@@ -45,8 +47,10 @@ export type DailyQuizListResponse = {
 
 export type DailyQuizAnswer = {
   correct: boolean;
-  selected_player_id: string;
-  correct_player_ids: string[];
+  selected_player_id?: string;
+  correct_player_ids?: string[];
+  selected_option?: number;
+  correct_option?: number;
 };
 
 export type DailyQuizGenerateCategory = {
@@ -99,10 +103,17 @@ export function deleteDailyQuiz(id: string) {
   return api<void>(`/api/v1/daily-quiz/${id}`, { method: "DELETE" });
 }
 
-export function answerDailyQuizItem(itemId: string, playerId: string) {
+export function isPlayerStatItem(item: DailyQuizItem) {
+  return item.kind === "player_stat" || item.options.some((option) => !option.player_id);
+}
+
+export function answerDailyQuizItem(itemId: string, playerId?: string, option?: number) {
+  const body: Record<string, unknown> = {};
+  if (playerId) body.player_id = playerId;
+  if (option != null) body.option = option;
   return api<DailyQuizAnswer>(`/api/v1/daily-quiz/items/${itemId}/answer`, {
     method: "POST",
-    body: JSON.stringify({ player_id: playerId }),
+    body: JSON.stringify(body),
   });
 }
 

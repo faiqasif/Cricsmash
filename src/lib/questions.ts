@@ -39,6 +39,7 @@ export function tournamentQuestionCategories(categories: Category[]) {
 export const TOURNAMENT_NAME_TOKEN = "{tournament}";
 export const FORMAT_NAME_TOKEN = "{format}";
 export const COUNTRY_NAME_TOKEN = "{country}";
+export const PLAYER_NAME_TOKEN = "{player_name}";
 
 export const FORMAT_QUESTION_PHRASES = {
   odi: "ODIs",
@@ -70,7 +71,7 @@ export function insertTournamentNameToken(title: string) {
 
 export function fillPlayerQuestionTitle(
   title: string,
-  options?: { format?: PlayerQuestionFormat | string; country?: string },
+  options?: { format?: PlayerQuestionFormat | string; country?: string; playerName?: string },
 ) {
   let out = title;
   const format = options?.format;
@@ -86,6 +87,10 @@ export function fillPlayerQuestionTitle(
     out = out.split(COUNTRY_NAME_TOKEN).join(country);
     out = out.split("{country_name}").join(country);
   }
+  const playerName = options?.playerName?.trim();
+  if (playerName) {
+    out = out.split(PLAYER_NAME_TOKEN).join(playerName);
+  }
   return out;
 }
 
@@ -95,6 +100,10 @@ export function insertFormatToken(title: string) {
 
 export function insertCountryToken(title: string) {
   return insertTitleToken(title, COUNTRY_NAME_TOKEN);
+}
+
+export function insertPlayerNameToken(title: string) {
+  return insertTitleToken(title, PLAYER_NAME_TOKEN);
 }
 
 export async function fetchAllQuestions(params: {
