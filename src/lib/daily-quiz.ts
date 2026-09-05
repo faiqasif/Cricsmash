@@ -17,7 +17,7 @@ export type DailyQuizItem = {
   title: string;
   format: string;
   metric?: string;
-  kind?: "player_stat" | "general";
+  kind?: "player_stat" | "general" | "tournament";
   options: DailyQuizPlayer[];
 };
 
@@ -104,7 +104,7 @@ export function deleteDailyQuiz(id: string) {
 }
 
 export function isPlayerStatItem(item: DailyQuizItem) {
-  return item.kind === "player_stat" || item.kind === "general" || item.options.some((option) => !option.player_id);
+  return item.kind === "player_stat" || item.kind === "general" || item.kind === "tournament" || item.options.some((option) => !option.player_id);
 }
 
 export function answerDailyQuizItem(itemId: string, playerId?: string, option?: number) {

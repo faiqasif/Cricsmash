@@ -6,8 +6,8 @@ import { ApiError } from "@/lib/api";
 import { generateDailyQuiz } from "@/lib/daily-quiz";
 import {
   fetchAllCategories,
+  fetchAllQuestions,
   GENERAL_CATEGORY_NAME,
-  isQuizTournamentCategory,
   type Category,
 } from "@/lib/questions";
 
@@ -41,10 +41,18 @@ export function QuizGenerateForm({ initialDate, lockDate = false }: QuizGenerate
   }, [counts, selectedIds]);
 
   useEffect(() => {
-    fetchAllCategories()
-      .then((all) => {
+    Promise.all([
+      fetchAllCategories(),
+      fetchAllQuestions({ type: "player", status: "active" }),
+      fetchAllQuestions({ type: "general", status: "active" }),
+      fetchAllQuestions({ type: "tournament", status: "active" }),
+    ])
+      .then(([all, playerQuestions, generalQuestions, tournamentQuestions]) => {
+        const withTemplates = new Set(
+          [...playerQuestions, ...generalQuestions, ...tournamentQuestions].map((item) => item.category_id),
+        );
         const items = all
-          .filter((item) => item.status === "active" && !isQuizTournamentCategory(item.name))
+          .filter((item) => item.status === "active" && withTemplates.has(item.id))
           .sort((a, b) => {
             const aGeneral = a.name.trim().toLowerCase() === GENERAL_CATEGORY_NAME.toLowerCase();
             const bGeneral = b.name.trim().toLowerCase() === GENERAL_CATEGORY_NAME.toLowerCase();
@@ -133,7 +141,9 @@ export function QuizGenerateForm({ initialDate, lockDate = false }: QuizGenerate
 
       <div className="mt-6">
         <p className="text-sm font-medium text-white">Categories</p>
-        <p className="mt-1 text-sm text-zinc-500">Select one or more, then set the question count for each.</p>
+        <p className="mt-1 text-sm text-zinc-500">
+          Select one or more, then set the question count for each. Categories with no templates are hidden. Tournament categories copy A–D from Tournament events.
+        </p>
       </div>
       {categories.length === 0 ? (
         <p className="mt-3 text-sm text-zinc-500">No active categories found.</p>
