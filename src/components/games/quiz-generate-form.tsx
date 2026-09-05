@@ -2,13 +2,13 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { api, ApiError } from "@/lib/api";
+import { ApiError } from "@/lib/api";
 import { generateDailyQuiz } from "@/lib/daily-quiz";
 import {
+  fetchAllCategories,
   GENERAL_CATEGORY_NAME,
   isQuizTournamentCategory,
   type Category,
-  type CategoryListResponse,
 } from "@/lib/questions";
 
 function todayISO() {
@@ -41,14 +41,16 @@ export function QuizGenerateForm({ initialDate, lockDate = false }: QuizGenerate
   }, [counts, selectedIds]);
 
   useEffect(() => {
-    api<CategoryListResponse>("/api/v1/categories?page_size=50")
-      .then((data) => {
-        const items = data.items.filter(
-          (item) =>
-            item.status === "active" &&
-            item.name !== GENERAL_CATEGORY_NAME &&
-            !isQuizTournamentCategory(item.name),
-        );
+    fetchAllCategories()
+      .then((all) => {
+        const items = all
+          .filter((item) => item.status === "active" && !isQuizTournamentCategory(item.name))
+          .sort((a, b) => {
+            const aGeneral = a.name.trim().toLowerCase() === GENERAL_CATEGORY_NAME.toLowerCase();
+            const bGeneral = b.name.trim().toLowerCase() === GENERAL_CATEGORY_NAME.toLowerCase();
+            if (aGeneral !== bGeneral) return aGeneral ? -1 : 1;
+            return a.name.localeCompare(b.name);
+          });
         setCategories(items);
         setCounts((prev) => {
           const next = { ...prev };
@@ -134,7 +136,7 @@ export function QuizGenerateForm({ initialDate, lockDate = false }: QuizGenerate
         <p className="mt-1 text-sm text-zinc-500">Select one or more, then set the question count for each.</p>
       </div>
       {categories.length === 0 ? (
-        <p className="mt-3 text-sm text-zinc-500">No active player categories found.</p>
+        <p className="mt-3 text-sm text-zinc-500">No active categories found.</p>
       ) : (
         <ul className="mt-3 space-y-2">
           {categories.map((category) => {
