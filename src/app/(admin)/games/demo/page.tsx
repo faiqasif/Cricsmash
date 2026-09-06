@@ -207,6 +207,7 @@ function QuizCard({
         <div>
           <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">
             Question {String(index).padStart(2, "0")}
+            {item.category_name ? ` · ${item.category_name}` : ""}
             {format ? ` · ${format}` : ""}
           </p>
           <h2 className="mt-2 text-lg font-semibold text-white sm:text-xl">{item.title}</h2>

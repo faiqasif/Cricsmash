@@ -12,6 +12,7 @@ import { api, ApiError } from "@/lib/api";
 import {
   fetchAllCategories,
   fillTournamentTitle,
+  isQuizTournamentCategory,
   tournamentQuestionCategories,
   type Category,
   type Question,
@@ -93,7 +94,7 @@ export function TournamentForm({ templates, tournament }: TournamentFormProps) {
   const quizCategories = useMemo(() => {
     const byId = new Map<string, { id: string; name: string }>();
     for (const template of templates) {
-      if (template.category_id && template.category_name) {
+      if (template.category_id && template.category_name && isQuizTournamentCategory(template.category_name)) {
         byId.set(template.category_id, { id: template.category_id, name: template.category_name });
       }
     }
@@ -101,7 +102,7 @@ export function TournamentForm({ templates, tournament }: TournamentFormProps) {
       if (!answer.category_id) continue;
       const category = categories.find((item) => item.id === answer.category_id);
       const name = category?.name || answer.category_name;
-      if (name) {
+      if (name && isQuizTournamentCategory(name)) {
         byId.set(answer.category_id, { id: answer.category_id, name });
       }
     }

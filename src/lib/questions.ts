@@ -31,9 +31,7 @@ export function isQuizTournamentCategory(name: string) {
 }
 
 export function tournamentQuestionCategories(categories: Category[]) {
-  return categories.filter(
-    (item) => item.name.trim().toLowerCase() !== GENERAL_CATEGORY_NAME.toLowerCase(),
-  );
+  return categories.filter((item) => isQuizTournamentCategory(item.name));
 }
 
 export const TOURNAMENT_NAME_TOKEN = "{tournament}";

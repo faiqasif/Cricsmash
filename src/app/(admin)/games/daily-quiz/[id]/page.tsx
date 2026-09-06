@@ -135,8 +135,18 @@ export default function DailyQuizDetailPage() {
 
           <h2 className="mt-6 text-lg font-semibold text-white">All Question({quiz.items.length})</h2>
           <div className="mt-4 space-y-4">
-            {quiz.items.map((item) => (
+            {quiz.items.map((item, index) => (
               <section key={item.id} className="rounded-[28px] bg-[#14141a] px-5 py-5 sm:px-7">
+                <div className="mb-3 flex flex-wrap items-center gap-2">
+                  <span className="text-xs font-medium uppercase tracking-wide text-zinc-500">
+                    Question {String(index + 1).padStart(2, "0")}
+                  </span>
+                  {item.category_name ? (
+                    <span className="rounded-full border border-white/10 bg-[#0c0c10] px-2.5 py-0.5 text-xs font-medium text-zinc-300">
+                      {item.category_name}
+                    </span>
+                  ) : null}
+                </div>
                 <p className="text-base font-medium text-white">{item.title}</p>
                 <div className="mt-4 grid gap-3 sm:grid-cols-2">
                   {item.options.map((option, index) => (
