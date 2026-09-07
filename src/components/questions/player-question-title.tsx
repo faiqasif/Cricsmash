@@ -11,8 +11,10 @@ import {
   insertCountryToken,
   insertFormatToken,
   insertPlayerNameToken,
+  insertYearToken,
   PLAYER_NAME_TOKEN,
   PLAYER_QUESTION_FORMATS,
+  YEAR_NAME_TOKEN,
 } from "@/lib/questions";
 
 const inputClass =
@@ -68,7 +70,9 @@ export function PlayerQuestionTitle({
           player: insert <span className="font-medium text-white">{PLAYER_NAME_TOKEN}</span>{" "}
           and write the format in the title if needed. Use{" "}
           <span className="font-medium text-white">{COUNTRY_NAME_TOKEN}</span> for a country
-          (the player’s home country on stats questions).
+          (the player’s home country on stats questions). Use{" "}
+          <span className="font-medium text-white">{YEAR_NAME_TOKEN}</span> for a debut year
+          the generator fills (for example “debut in {YEAR_NAME_TOKEN}”).
         </p>
         <textarea
           name="title"
@@ -102,6 +106,13 @@ export function PlayerQuestionTitle({
           className="text-sm font-medium text-purple hover:underline"
         >
           Insert country
+        </button>
+        <button
+          type="button"
+          onClick={() => onTitleChange(insertYearToken(title))}
+          className="text-sm font-medium text-purple hover:underline"
+        >
+          Insert year
         </button>
       </div>
       {previews.length > 0 ? (

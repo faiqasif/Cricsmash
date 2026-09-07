@@ -38,6 +38,8 @@ export const TOURNAMENT_NAME_TOKEN = "{tournament}";
 export const FORMAT_NAME_TOKEN = "{format}";
 export const COUNTRY_NAME_TOKEN = "{country}";
 export const PLAYER_NAME_TOKEN = "{player_name}";
+export const YEAR_NAME_TOKEN = "{year}";
+export const NUMBER_NAME_TOKEN = "{number}";
 
 export const FORMAT_QUESTION_PHRASES = {
   odi: "ODIs",
@@ -69,7 +71,7 @@ export function insertTournamentNameToken(title: string) {
 
 export function fillPlayerQuestionTitle(
   title: string,
-  options?: { format?: PlayerQuestionFormat | string; country?: string; playerName?: string },
+  options?: { format?: PlayerQuestionFormat | string; country?: string; playerName?: string; year?: number | string; number?: number | string },
 ) {
   let out = title;
   const format = options?.format;
@@ -89,6 +91,14 @@ export function fillPlayerQuestionTitle(
   if (playerName) {
     out = out.split(PLAYER_NAME_TOKEN).join(playerName);
   }
+  if (out.includes(YEAR_NAME_TOKEN) || out.includes("[year]")) {
+    const year = String(options?.year ?? 2011);
+    out = out.split(YEAR_NAME_TOKEN).join(year);
+    out = out.split("[year]").join(year);
+  }
+  if (out.includes(NUMBER_NAME_TOKEN)) {
+    out = out.split(NUMBER_NAME_TOKEN).join(String(options?.number ?? 50));
+  }
   return out;
 }
 
@@ -102,6 +112,10 @@ export function insertCountryToken(title: string) {
 
 export function insertPlayerNameToken(title: string) {
   return insertTitleToken(title, PLAYER_NAME_TOKEN);
+}
+
+export function insertYearToken(title: string) {
+  return insertTitleToken(title, YEAR_NAME_TOKEN);
 }
 
 export async function fetchAllQuestions(params: {
