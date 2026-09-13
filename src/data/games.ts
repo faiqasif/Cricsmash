@@ -36,6 +36,7 @@ export const GAME_CARDS: GameCard[] = [
     slug: "team-of-the-day",
     title: "Team of the day",
     description: "Build the team and prove you know your cricket.",
+    href: "/games/team-of-the-day",
     image: "/games/team-of-the-day.png",
   },
 ];

@@ -1,4 +1,5 @@
 import type { CustomFieldAppliesTo } from "@/data/cricket";
+import { api } from "@/lib/api";
 
 export type FormatKey = "odi" | "t20" | "test";
 
@@ -199,3 +200,17 @@ export type PlayerPayload = {
   test?: FormatStats;
   custom_fields?: PlayerCustomFieldValue[];
 };
+
+export function suggestPlayers(params: {
+  country: string;
+  q?: string;
+  exclude?: string[];
+  limit?: number;
+}) {
+  const query = new URLSearchParams();
+  query.set("country", params.country);
+  if (params.q) query.set("q", params.q);
+  if (params.exclude?.length) query.set("exclude", params.exclude.join(","));
+  query.set("limit", String(params.limit ?? 12));
+  return api<{ items: PlayerListItem[] }>(`/api/v1/players/suggest?${query.toString()}`);
+}
