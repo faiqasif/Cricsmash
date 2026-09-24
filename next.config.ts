@@ -17,12 +17,14 @@ const nextConfig: NextConfig = {
   },
   async rewrites() {
     if (!apiOrigin) return [];
-    return [
-      {
-        source: "/api/:path*",
-        destination: `${apiOrigin}/api/:path*`,
-      },
-    ];
+    return {
+      fallback: [
+        {
+          source: "/api/:path*",
+          destination: `${apiOrigin}/api/:path*`,
+        },
+      ],
+    };
   },
 };
 
