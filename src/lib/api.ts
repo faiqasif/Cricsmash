@@ -1,3 +1,11 @@
+function usesNextApi(path: string) {
+  return (
+    path.startsWith("/api/v1/players") ||
+    path.startsWith("/api/v1/player-fields") ||
+    path.startsWith("/api/v1/auth")
+  );
+}
+
 function apiBaseUrl() {
   const fromEnv = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "");
   if (fromEnv) return fromEnv;
@@ -51,7 +59,8 @@ async function rawFetch(path: string, init: RequestInit | undefined, token: stri
   if (!headers.has("Content-Type") && init?.body && !(init.body instanceof FormData)) {
     headers.set("Content-Type", "application/json");
   }
-  return fetch(`${API_URL}${path}`, { ...init, headers });
+  const base = usesNextApi(path) ? "" : API_URL;
+  return fetch(`${base}${path}`, { ...init, headers });
 }
 
 async function tryRefresh(): Promise<boolean> {
@@ -61,7 +70,7 @@ async function tryRefresh(): Promise<boolean> {
 
   refreshPromise = (async () => {
     try {
-      const res = await fetch(`${API_URL}/api/v1/auth/refresh`, {
+      const res = await fetch("/api/v1/auth/refresh", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ refresh_token: refreshToken }),
@@ -116,14 +125,4 @@ export async function api<T>(path: string, init?: RequestInit): Promise<T> {
     );
   }
   return body.data as T;
-}
-
-export async function uploadPlayerPhoto(file: File): Promise<string> {
-  const body = new FormData();
-  body.append("photo", file);
-  const data = await api<{ url: string }>("/api/v1/players/photos", {
-    method: "POST",
-    body,
-  });
-  return data.url;
 }

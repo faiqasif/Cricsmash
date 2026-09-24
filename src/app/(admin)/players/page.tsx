@@ -37,8 +37,8 @@ export default function PlayersPage() {
       setPlayers(data.items);
       setTotal(data.total);
       setTotalPages(data.total_pages);
-    } catch {
-      setError("Could not load players. Make sure the Go API is running on port 8080.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not load players from Firebase.");
       setPlayers([]);
       setTotal(0);
       setTotalPages(0);

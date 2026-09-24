@@ -9,7 +9,7 @@ import { ErrorText } from "@/components/form/error-text";
 import { CreateFieldModal } from "@/components/players/create-field-modal";
 import { ConfirmDeleteModal, openConfirm } from "@/components/ui/confirm-delete-modal";
 import { COUNTRIES, customAppliesToForRole, FORMAT_LABELS, FORMATS, PLAYING_HANDS, ROLES, TEST_COUNTRIES } from "@/data/cricket";
-import { api, ApiError, uploadPlayerPhoto } from "@/lib/api";
+import { api, ApiError } from "@/lib/api";
 import type { FormatKey, FormatStats, Player, PlayerCustomField } from "@/lib/players";
 import {
   playerInitialValues,
@@ -75,7 +75,6 @@ type PlayerFormProps = {
 export function PlayerForm({ player }: PlayerFormProps) {
   const router = useRouter();
   const editing = Boolean(player);
-  const [photoPreview, setPhotoPreview] = useState(player?.photo_url ?? "");
   const [customFields, setCustomFields] = useState<PlayerCustomField[]>([]);
   const [fieldsError, setFieldsError] = useState("");
   const [fieldModalOpen, setFieldModalOpen] = useState(false);
@@ -88,11 +87,7 @@ export function PlayerForm({ player }: PlayerFormProps) {
     onSubmit: async (values, helpers) => {
       helpers.setStatus("");
       try {
-        let photoUrl = player?.photo_url ?? null;
-        if (values.photo) {
-          photoUrl = await uploadPlayerPhoto(values.photo);
-        }
-        const body = playerPayloadFromValues(values, photoUrl);
+        const body = playerPayloadFromValues(values, player?.photo_url ?? null);
         if (editing && player) {
           await api(`/api/v1/players/${player.id}`, {
             method: "PUT",
@@ -306,38 +301,6 @@ export function PlayerForm({ player }: PlayerFormProps) {
           {formik.status}
         </p>
       ) : null}
-
-      <div className="mt-8">
-        <p className={labelClass}>Player Photo</p>
-        <div className="flex items-center gap-4">
-          {photoPreview ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={photoPreview} alt="" className="size-20 rounded-full object-cover" />
-          ) : (
-            <span className="flex size-20 items-center justify-center rounded-full bg-purple-soft text-sm font-semibold text-purple">
-              Photo
-            </span>
-          )}
-          <label className="inline-flex h-11 cursor-pointer items-center rounded-full border border-white/10 bg-[#121218] px-5 text-sm text-zinc-300">
-            Upload photo
-            <input
-              type="file"
-              name="photo"
-              accept="image/jpeg,image/png,image/webp,image/gif"
-              className="hidden"
-              onChange={(e) => {
-                const file = e.target.files?.[0] ?? null;
-                formik.setFieldValue("photo", file);
-                formik.setFieldTouched("photo", true, false);
-                if (file) {
-                  setPhotoPreview(URL.createObjectURL(file));
-                }
-              }}
-            />
-          </label>
-        </div>
-        <ErrorText message={fieldError("photo")} />
-      </div>
 
       <div className="mt-8 grid gap-6 md:grid-cols-2">
         <Field label="Player Name" required error={fieldError("name")}>
