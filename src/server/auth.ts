@@ -15,7 +15,12 @@ export class AuthError extends Error {
 
 function apiKey() {
   const value = process.env.FIREBASE_API_KEY?.trim();
-  if (!value) throw new AuthError(500, "Firebase config is missing.");
+  if (!value) {
+    throw new AuthError(
+      500,
+      "FIREBASE_API_KEY is not set for this deployment. In Vercel, add it for Preview and Production, then redeploy.",
+    );
+  }
   return value;
 }
 

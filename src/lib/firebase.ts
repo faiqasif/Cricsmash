@@ -16,20 +16,22 @@ export type StoredDocument = {
   data: Json;
 };
 
-function required(name: string) {
-  const value = process.env[name]?.trim();
-  if (!value) {
-    throw new Error(`Missing ${name}. Add the Firebase web config to .env.local.`);
-  }
-  return value;
+function missing(name: string) {
+  return new Error(
+    `${name} is not set for this deployment. In Vercel, add it for Preview and Production, then redeploy.`,
+  );
 }
 
 function projectId() {
-  return required("FIREBASE_PROJECT_ID");
+  const value = process.env.FIREBASE_PROJECT_ID?.trim();
+  if (!value) throw missing("FIREBASE_PROJECT_ID");
+  return value;
 }
 
 function apiKey() {
-  return required("FIREBASE_API_KEY");
+  const value = process.env.FIREBASE_API_KEY?.trim();
+  if (!value) throw missing("FIREBASE_API_KEY");
+  return value;
 }
 
 const firebaseUserToken = new AsyncLocalStorage<string>();
