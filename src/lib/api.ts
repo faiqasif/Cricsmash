@@ -2,7 +2,8 @@ function usesNextApi(path: string) {
   return (
     path.startsWith("/api/v1/players") ||
     path.startsWith("/api/v1/player-fields") ||
-    path.startsWith("/api/v1/auth")
+    path.startsWith("/api/v1/auth") ||
+    path.startsWith("/api/v1/team-of-the-day")
   );
 }
 

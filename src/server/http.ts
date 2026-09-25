@@ -19,6 +19,15 @@ export function errorResponse(err: unknown) {
   if (err instanceof Error && err.name === "PlayerNotFoundError") {
     return fail(404, "not_found", err.message);
   }
+  if (err instanceof Error && err.name === "TeamInputError") {
+    return fail(400, "invalid_input", err.message);
+  }
+  if (err instanceof Error && err.name === "TeamNotFoundError") {
+    return fail(404, "not_found", err.message);
+  }
+  if (err instanceof Error && err.name === "TeamConflictError") {
+    return fail(409, "conflict", err.message);
+  }
   if (err instanceof Error && err.name === "AuthError") {
     const status = "status" in err && typeof err.status === "number" ? err.status : 401;
     return fail(status, "unauthorized", err.message);
@@ -29,7 +38,7 @@ export function errorResponse(err: unknown) {
       return fail(
         403,
         "permission_denied",
-        "Firebase blocked this request. Sign in, and allow signed-in access to the players and playerFields collections.",
+        "Firebase blocked this request. Sign in, and allow signed-in access to the players, playerFields, and teamsOfTheDay collections.",
       );
     }
     return fail(502, "firebase_error", err.message);
