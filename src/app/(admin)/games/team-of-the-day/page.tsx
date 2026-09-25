@@ -196,12 +196,20 @@ export default function TeamOfTheDayListPage() {
               setStatus(event.target.value);
               setPage(1);
             }}
-            className="h-12 appearance-none rounded-full border border-white/8 bg-[#14141a] px-5 pr-10 text-sm text-white outline-none"
+            className="h-12 appearance-none rounded-full border border-white/8 bg-[#14141a] px-5 pr-10 text-sm text-white outline-none [color-scheme:dark]"
           >
-            <option value="">All Status</option>
-            <option value="active">Active</option>
-            <option value="pending">Pending</option>
-            <option value="past">Past</option>
+            <option value="" className="bg-[#14141a] text-white">
+              All Status
+            </option>
+            <option value="active" className="bg-[#14141a] text-white">
+              Active
+            </option>
+            <option value="pending" className="bg-[#14141a] text-white">
+              Pending
+            </option>
+            <option value="past" className="bg-[#14141a] text-white">
+              Past
+            </option>
           </select>
           <ChevronDown className="pointer-events-none absolute right-4 top-1/2 size-4 -translate-y-1/2 text-zinc-500" />
         </div>
@@ -279,11 +287,17 @@ export default function TeamOfTheDayListPage() {
                         <select
                           value={item.status}
                           onChange={(event) => void changeStatus(item, event.target.value as TeamOfTheDayStatus)}
-                          className={`h-8 appearance-none rounded-full px-3 pr-7 text-xs font-medium outline-none ${statusClass(item.status)}`}
+                          className={`h-8 appearance-none rounded-full px-3 pr-7 text-xs font-medium outline-none [color-scheme:dark] ${statusClass(item.status)}`}
                         >
-                          <option value="active">Active</option>
-                          <option value="pending">Pending</option>
-                          <option value="past">Past</option>
+                          <option value="active" className="bg-[#14141a] text-white">
+                            Active
+                          </option>
+                          <option value="pending" className="bg-[#14141a] text-white">
+                            Pending
+                          </option>
+                          <option value="past" className="bg-[#14141a] text-white">
+                            Past
+                          </option>
                         </select>
                         <ChevronDown className="pointer-events-none absolute right-2 top-1/2 size-3 -translate-y-1/2 opacity-70" />
                       </div>

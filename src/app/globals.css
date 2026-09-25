@@ -55,6 +55,12 @@ dialog.app-modal::backdrop {
   backdrop-filter: blur(6px);
 }
 
+select {
+  color-scheme: dark;
+}
+
 select option {
+  background-color: #14141a;
+  color: #f4f4f5;
   padding: 8px 14px;
 }
