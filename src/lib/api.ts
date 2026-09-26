@@ -48,7 +48,13 @@ let refreshPromise: Promise<boolean> | null = null;
 
 async function parseEnvelope<T>(res: Response): Promise<Envelope<T>> {
   if (res.status === 204) return {};
-  return (await res.json()) as Envelope<T>;
+  const text = await res.text();
+  if (!text) return {};
+  try {
+    return JSON.parse(text) as Envelope<T>;
+  } catch {
+    throw new ApiError(res.status, "error", "The server returned a page instead of quiz data. Refresh the page and try again.");
+  }
 }
 
 function authHeaders(token: string | null, extra?: HeadersInit): Headers {

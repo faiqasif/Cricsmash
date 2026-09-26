@@ -1,14 +1,14 @@
 import { deleteDocument, getDocument, listDocuments, queryDocuments, setDocument } from "@/lib/firebase";
 import type { DailyQuiz, DailyQuizAnswer, DailyQuizItem, DailyQuizListResponse, DailyQuizPlayer, DailyQuizStatus } from "@/lib/daily-quiz";
-import { fillPlayerQuestionTitle } from "@/lib/questions";
 import { allQuestions, clearQuestionsUsed, getCategory, markQuestionsUsed } from "@/server/catalog";
 import { CatalogInputError, CatalogNotFoundError } from "@/server/catalog";
-import { listPlayers } from "@/server/players";
-import type { PlayerListItem } from "@/lib/players";
+import type { Player } from "@/lib/players";
+import { getPlayer, listActivePlayers } from "@/server/players";
+import { buildStatQuestion } from "@/server/quiz-pick";
+import { correctPlayerIndexes } from "@/server/quiz-metrics";
 
 const COLLECTION = "dailyQuizzes";
 const STATUSES = ["pending", "active", "past"] as const;
-const FORMATS = ["odi", "t20", "test"] as const;
 
 type StoredItem = DailyQuizItem & { question_id: string };
 
@@ -79,6 +79,7 @@ function readItem(value: unknown): StoredItem | null {
     metric: typeof row.metric === "string" ? row.metric : undefined,
     kind,
     category_name: typeof row.category_name === "string" ? row.category_name : undefined,
+    country: typeof row.country === "string" ? row.country : "",
     options: readOptions(row.options),
   };
 }
@@ -190,16 +191,6 @@ export async function getTodayDailyQuiz() {
   return toQuiz(await refreshPast(quiz));
 }
 
-async function activePlayers() {
-  const first = await listPlayers({ q: "", role: "", country: "", page: 1, pageSize: 100 });
-  const items = [...first.items];
-  for (let page = 2; page <= first.total_pages; page += 1) {
-    const next = await listPlayers({ q: "", role: "", country: "", page, pageSize: 100 });
-    items.push(...next.items);
-  }
-  return items.filter((player) => player.status === "active");
-}
-
 function shuffle<T>(values: T[]) {
   const copy = [...values];
   for (let index = copy.length - 1; index > 0; index -= 1) {
@@ -207,19 +198,6 @@ function shuffle<T>(values: T[]) {
     [copy[index], copy[swap]] = [copy[swap], copy[index]];
   }
   return copy;
-}
-
-function playerOptions(players: PlayerListItem[], correct: PlayerListItem): DailyQuizPlayer[] {
-  const others = shuffle(players.filter((player) => player.id !== correct.id)).slice(0, 3);
-  const chosen = shuffle([correct, ...others]);
-  return chosen.map((player, index) => ({
-    player_id: player.id,
-    name: player.name,
-    country: player.country,
-    photo_url: player.photo_url,
-    correct: player.id === correct.id,
-    option: index + 1,
-  }));
 }
 
 function textOptions(question: { option_1: string | null; option_2: string | null; option_3: string | null; option_4: string | null; correct_option: number | null }): DailyQuizPlayer[] {
@@ -264,8 +242,9 @@ export async function generateDailyQuiz(value: unknown) {
   if (total > 50) throw new CatalogInputError("Total number of questions cannot exceed 50");
 
   const questions = await allQuestions();
-  const players = await activePlayers();
+  const players = await listActivePlayers();
   const items: StoredItem[] = [];
+  const usedSubjects = new Set<string>();
   for (const allocation of allocations) {
     const pool = shuffle(
       questions.filter((question) => question.category_id === allocation.category_id && question.status === "active"),
@@ -273,37 +252,47 @@ export async function generateDailyQuiz(value: unknown) {
     const unused = pool.filter((question) => !question.used);
     const ordered = [...unused, ...pool.filter((question) => question.used)];
     if (ordered.length === 0) throw new CatalogInputError(`${allocation.name} has no question templates`);
-    const picked = ordered.slice(0, allocation.count);
-    if (picked.length < allocation.count) {
-      throw new CatalogInputError(`${allocation.name} does not have enough questions`);
-    }
-    for (const question of picked) {
-      const hasText = Boolean(question.option_1 && question.option_2 && question.option_3 && question.option_4);
-      const format = FORMATS[items.length % FORMATS.length];
-      let options: DailyQuizPlayer[];
-      let title = question.title;
-      if (hasText) {
-        options = textOptions(question);
-      } else {
-        if (players.length < 4) throw new CatalogInputError("Add at least 4 active players before generating a quiz");
-        const correct = players[items.length % players.length];
-        options = playerOptions(players, correct);
-        title = fillPlayerQuestionTitle(question.title, {
-          format,
-          country: correct.country,
-          playerName: correct.name,
+    let made = 0;
+    const pickedIds = new Set<string>();
+    for (const question of ordered) {
+      if (made >= allocation.count) break;
+      if (pickedIds.has(question.id)) continue;
+      const hasText = Boolean(question.option_1 && question.option_2 && question.option_3 && question.option_4 && question.correct_option);
+      if (hasText && (question.type === "general" || question.type === "tournament")) {
+        pickedIds.add(question.id);
+        items.push({
+          id: crypto.randomUUID(),
+          question_id: question.id,
+          title: question.title,
+          format: "",
+          metric: question.type,
+          kind: question.type,
+          category_name: allocation.name,
+          country: "",
+          options: textOptions(question),
         });
+        made += 1;
+        continue;
       }
+      const built = buildStatQuestion(question.title, question.metric ?? "", players, usedSubjects);
+      if (!built) continue;
+      pickedIds.add(question.id);
       const kind = question.type === "general" ? "general" : question.type === "tournament" ? "tournament" : "player_stat";
       items.push({
         id: crypto.randomUUID(),
         question_id: question.id,
-        title,
-        format,
+        title: built.title,
+        format: built.format,
+        metric: built.metric,
         kind,
         category_name: allocation.name,
-        options,
+        country: built.country,
+        options: built.options,
       });
+      made += 1;
+    }
+    if (made < allocation.count) {
+      throw new CatalogInputError(`${allocation.name} does not have enough questions whose stats can make a fair set of options`);
     }
   }
 
@@ -365,6 +354,25 @@ export async function answerDailyQuizItem(itemId: string, value: unknown): Promi
   for (const quiz of quizzes) {
     const item = quiz.items.find((entry) => entry.id === itemId);
     if (!item) continue;
+    const playerOptions = item.options.filter((entry) => entry.player_id);
+    if (playerOptions.length >= 4 && item.metric && item.metric !== "general" && item.metric !== "tournament") {
+      const players: Player[] = [];
+      for (const option of item.options) {
+        if (!option.player_id) continue;
+        players.push(await getPlayer(option.player_id));
+      }
+      const best = correctPlayerIndexes(players, item.format, item.country ?? "", item.metric, item.title);
+      if (best.length === 0) throw new CatalogInputError("Could not score this question from current player stats");
+      const correctIds = best.map((index) => players[index]?.id).filter(Boolean);
+      const selected = item.options.find((entry) => (playerId && entry.player_id === playerId) || (option != null && entry.option === option));
+      return {
+        correct: Boolean(selected?.player_id && correctIds.includes(selected.player_id)),
+        selected_player_id: playerId || selected?.player_id || undefined,
+        correct_player_ids: correctIds,
+        selected_option: selected?.option,
+        correct_option: item.options.find((entry) => entry.player_id && correctIds.includes(entry.player_id))?.option,
+      };
+    }
     const correct = item.options.find((entry) => entry.correct);
     const selected = item.options.find((entry) => (playerId && entry.player_id === playerId) || (option != null && entry.option === option));
     return {

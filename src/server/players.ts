@@ -320,6 +320,10 @@ function toListItem(player: Player): PlayerListItem {
   };
 }
 
+export async function listActivePlayers() {
+  return (await allPlayers()).filter((player) => player.status === "active");
+}
+
 async function allPlayers() {
   const docs = await listDocuments(PLAYERS);
   return docs

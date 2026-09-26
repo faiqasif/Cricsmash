@@ -19,6 +19,7 @@ export type DailyQuizItem = {
   metric?: string;
   kind?: "player_stat" | "general" | "tournament";
   category_name?: string;
+  country?: string;
   options: DailyQuizPlayer[];
 };
 

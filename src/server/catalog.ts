@@ -191,6 +191,7 @@ function readQuestion(id: string, data: Record<string, unknown>): Question {
     correct_option: typeof data.correct_option === "number" ? data.correct_option : null,
     used: data.used === true,
     last_used_on: typeof data.last_used_on === "string" ? data.last_used_on : null,
+    metric: typeof data.metric === "string" ? data.metric : "",
     created_at: typeof data.created_at === "string" ? data.created_at : "",
     updated_at: typeof data.updated_at === "string" ? data.updated_at : "",
   };
