@@ -104,11 +104,11 @@ async function firebaseFetch(url: URL, init?: RequestInit) {
   if (token) headers.set("Authorization", `Bearer ${token}`);
   const res = await fetch(url, { ...init, headers });
   const text = await res.text();
-  const body = text ? (JSON.parse(text) as Json) : {};
+  const parsed: unknown = text ? JSON.parse(text) : {};
   if (!res.ok) {
-    throw firebaseError(body, "Firebase request failed");
+    throw firebaseError((parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {}) as Json, "Firebase request failed");
   }
-  return body;
+  return parsed as Json;
 }
 
 function documentsBase() {
@@ -121,6 +121,67 @@ function readDocument(body: Json): StoredDocument | null {
     id: documentId(body.name),
     data: decode({ mapValue: { fields: body.fields as Record<string, FirestoreValue> } }) as Json,
   };
+}
+
+export type QueryFilter = { field: string; value: string | number | boolean };
+export type QueryOrder = { field: string; direction: "ASCENDING" | "DESCENDING" };
+
+export async function queryDocuments(
+  collectionName: string,
+  options: { where?: QueryFilter[]; orderBy?: QueryOrder; select?: string[]; limit?: number } = {},
+): Promise<StoredDocument[]> {
+  const filters = (options.where ?? []).filter((item) => item.value !== "");
+  const structured: Json = {
+    from: [{ collectionId: collectionName }],
+  };
+  if (filters.length === 1) {
+    structured.where = {
+      fieldFilter: {
+        field: { fieldPath: filters[0].field },
+        op: "EQUAL",
+        value: encode(filters[0].value),
+      },
+    };
+  } else if (filters.length > 1) {
+    structured.where = {
+      compositeFilter: {
+        op: "AND",
+        filters: filters.map((item) => ({
+          fieldFilter: {
+            field: { fieldPath: item.field },
+            op: "EQUAL",
+            value: encode(item.value),
+          },
+        })),
+      },
+    };
+  }
+  if (options.orderBy) {
+    structured.orderBy = [{ field: { fieldPath: options.orderBy.field }, direction: options.orderBy.direction }];
+  }
+  if (options.select?.length) {
+    structured.select = { fields: options.select.map((fieldPath) => ({ fieldPath })) };
+  }
+  if (options.limit) structured.limit = options.limit;
+  const url = new URL(`${documentsBase()}:runQuery`);
+  let body: unknown;
+  try {
+    body = await firebaseFetch(url, { method: "POST", body: JSON.stringify({ structuredQuery: structured }) });
+  } catch (err) {
+    if (err instanceof Error && /index/i.test(err.message)) return listDocuments(collectionName);
+    throw err;
+  }
+  const rows = Array.isArray(body) ? body : [];
+  const docs: StoredDocument[] = [];
+  for (const row of rows) {
+    if (!row || typeof row !== "object") continue;
+    const document = (row as Json).document;
+    if (document && typeof document === "object") {
+      const doc = readDocument(document as Json);
+      if (doc) docs.push(doc);
+    }
+  }
+  return docs;
 }
 
 export async function listDocuments(collectionName: string): Promise<StoredDocument[]> {

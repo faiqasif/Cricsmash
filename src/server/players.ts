@@ -1,5 +1,5 @@
 import { rankByName } from "@/lib/fuzzy";
-import { deleteDocument, getDocument, listDocuments, patchDocuments, setDocument } from "@/lib/firebase";
+import { deleteDocument, getDocument, listDocuments, patchDocuments, queryDocuments, setDocument } from "@/lib/firebase";
 import type {
   FormatStats,
   Player,
@@ -338,13 +338,24 @@ export async function listPlayers(input: {
   const pageSize = Number.isFinite(input.pageSize) && input.pageSize > 0 ? Math.min(Math.floor(input.pageSize), 100) : 5;
   const q = input.q.trim().toLowerCase();
   const role = input.role.trim();
-  const country = input.country.trim().toLowerCase();
-  const filtered = (await allPlayers()).filter((player) => {
-    if (q && !player.name.toLowerCase().includes(q)) return false;
-    if (role && player.role !== role) return false;
-    if (country && player.country.toLowerCase() !== country) return false;
-    return true;
+  const country = input.country.trim();
+  const where = [
+    ...(role ? [{ field: "role", value: role }] : []),
+    ...(country ? [{ field: "country", value: country }] : []),
+  ];
+  const docs = await queryDocuments(PLAYERS, {
+    where,
+    orderBy: { field: "created_at", direction: "DESCENDING" },
+    select: ["name", "country", "role", "status", "photo_url", "created_at", "odi.debut_year", "t20.debut_year", "test.debut_year"],
   });
+  const countryKey = country.toLowerCase();
+  const filtered = docs
+    .map((item) => readPlayer(item.id, item.data))
+    .filter((player) => {
+      if (q && !player.name.toLowerCase().includes(q)) return false;
+      if (countryKey && player.country.toLowerCase() !== countryKey) return false;
+      return true;
+    });
   const total = filtered.length;
   const totalPages = pageSize > 0 ? Math.ceil(total / pageSize) : 0;
   const start = (page - 1) * pageSize;
@@ -363,9 +374,15 @@ export async function suggestPlayers(input: { q: string; country: string; exclud
   const limit = Number.isFinite(input.limit) && input.limit > 0 ? Math.min(Math.floor(input.limit), 300) : 12;
   const excluded = new Set(input.exclude);
   const countryKey = country.toLowerCase();
-  const pool = (await allPlayers()).filter(
-    (player) => player.status === "active" && player.country.toLowerCase() === countryKey && !excluded.has(player.id),
-  );
+  const pool = (
+    await queryDocuments(PLAYERS, {
+      where: [{ field: "status", value: "active" }],
+      orderBy: { field: "name", direction: "ASCENDING" },
+      select: ["name", "country", "role", "status", "photo_url", "created_at", "odi.debut_year", "t20.debut_year", "test.debut_year"],
+    })
+  )
+    .map((item) => readPlayer(item.id, item.data))
+    .filter((player) => player.country.toLowerCase() === countryKey && !excluded.has(player.id));
   const query = input.q.trim();
   const ranked = query
     ? rankByName(pool, query, (player) => player.name, 0.35)

@@ -3,7 +3,11 @@ function usesNextApi(path: string) {
     path.startsWith("/api/v1/players") ||
     path.startsWith("/api/v1/player-fields") ||
     path.startsWith("/api/v1/auth") ||
-    path.startsWith("/api/v1/team-of-the-day")
+    path.startsWith("/api/v1/team-of-the-day") ||
+    path.startsWith("/api/v1/categories") ||
+    path.startsWith("/api/v1/questions") ||
+    path.startsWith("/api/v1/daily-quiz") ||
+    path.startsWith("/api/v1/tournaments")
   );
 }
 

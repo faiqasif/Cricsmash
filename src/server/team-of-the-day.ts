@@ -1,4 +1,4 @@
-import { deleteDocument, getDocument, listDocuments, setDocument } from "@/lib/firebase";
+import { deleteDocument, getDocument, listDocuments, queryDocuments, setDocument } from "@/lib/firebase";
 import type { TeamOfTheDay, TeamOfTheDayListResponse, TeamOfTheDayPlayer, TeamOfTheDayStatus, TeamOfTheDayType } from "@/lib/team-of-the-day";
 import { getPlayer } from "@/server/players";
 
@@ -229,7 +229,20 @@ export async function listTeams(input: {
   const q = input.q.trim().toLowerCase();
   const from = input.from ? dateKey(input.from) : "";
   const to = input.to ? dateKey(input.to) : "";
-  const teams = await Promise.all((await allTeams()).map((team) => refreshPast(team)));
+  const where = [
+    ...(input.teamType ? [{ field: "team_type", value: input.teamType }] : []),
+    ...(input.status ? [{ field: "status", value: input.status }] : []),
+  ];
+  const teams = await Promise.all(
+    (
+      await queryDocuments(COLLECTION, {
+        where,
+        orderBy: { field: "play_date", direction: "DESCENDING" },
+      })
+    )
+      .map((item) => readTeam(item.id, item.data))
+      .map((team) => refreshPast(team)),
+  );
   const filtered = teams.filter((team) => {
     if (q) {
       const haystack = `${team.title} ${team.country} ${team.play_date}`.toLowerCase();

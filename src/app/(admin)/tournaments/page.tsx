@@ -37,8 +37,8 @@ export default function TournamentsPage() {
       setTournaments(data.items);
       setTotal(data.total);
       setTotalPages(data.total_pages);
-    } catch {
-      setError("Could not load tournaments. Make sure the Go API is running on port 8080.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not load tournaments.");
       setTournaments([]);
       setTotal(0);
       setTotalPages(0);

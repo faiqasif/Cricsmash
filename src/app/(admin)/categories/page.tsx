@@ -36,8 +36,8 @@ export default function CategoriesPage() {
       setCategories(data.items);
       setTotal(data.total);
       setTotalPages(data.total_pages);
-    } catch {
-      setError("Could not load categories. Make sure the Go API is running on port 8080.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not load categories.");
       setCategories([]);
       setTotal(0);
       setTotalPages(0);

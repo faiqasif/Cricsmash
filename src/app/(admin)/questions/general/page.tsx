@@ -44,8 +44,8 @@ export default function GeneralQuestionsPage() {
       setQuestions(data.items);
       setTotal(data.total);
       setTotalPages(data.total_pages);
-    } catch {
-      setError("Could not load questions. Make sure the Go API is running on port 8080.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not load questions.");
       setQuestions([]);
       setTotal(0);
       setTotalPages(0);
@@ -104,8 +104,8 @@ export default function GeneralQuestionsPage() {
               body: JSON.stringify({ used: !question.used }),
             });
             await load(true);
-          } catch {
-            setError("Could not update Used. Make sure the Go API is running on port 8080.");
+          } catch (err) {
+            setError(err instanceof Error ? err.message : "Could not update Used.");
           } finally {
             setTogglingUsedId(null);
           }
