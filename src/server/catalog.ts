@@ -1,5 +1,6 @@
 import { deleteDocument, getDocument, listDocuments, queryDocuments, setDocument } from "@/lib/firebase";
 import type { Category, CategoryListResponse, Question, QuestionListResponse, QuestionStatus, QuestionType } from "@/lib/questions";
+import { resolvePlayerMetric, slotFormats } from "@/server/quiz-metrics";
 
 const CATEGORIES = "categories";
 const QUESTIONS = "questions";
@@ -50,6 +51,8 @@ type StoredQuestion = {
   correct_option: number | null;
   used: boolean;
   last_used_on: string | null;
+  used_formats: string[];
+  metric: string;
   created_at: string;
   updated_at: string;
 };
@@ -173,8 +176,22 @@ async function ensureGeneralCategory() {
   return createCategory({ name: GENERAL_NAME, daily_question_limit: 10 });
 }
 
+function todayKey() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function readFormats(value: unknown) {
+  if (!Array.isArray(value)) return undefined;
+  return value.filter((item): item is string => typeof item === "string");
+}
+
 function readQuestion(id: string, data: Record<string, unknown>): Question {
   const type = TYPES.includes(data.type as QuestionType) ? (data.type as QuestionType) : "player";
+  const usedFormats = readFormats(data.used_formats);
+  const lastUsedOn = typeof data.last_used_on === "string" ? data.last_used_on : null;
+  let used = data.used === true;
+  if (type === "general") used = lastUsedOn === todayKey();
+  else if (type === "player" && usedFormats) used = usedFormats.length > 0;
   return {
     id,
     type,
@@ -189,8 +206,9 @@ function readQuestion(id: string, data: Record<string, unknown>): Question {
     option_3: typeof data.option_3 === "string" ? data.option_3 : null,
     option_4: typeof data.option_4 === "string" ? data.option_4 : null,
     correct_option: typeof data.correct_option === "number" ? data.correct_option : null,
-    used: data.used === true,
-    last_used_on: typeof data.last_used_on === "string" ? data.last_used_on : null,
+    used,
+    last_used_on: lastUsedOn,
+    used_formats: usedFormats,
     metric: typeof data.metric === "string" ? data.metric : "",
     created_at: typeof data.created_at === "string" ? data.created_at : "",
     updated_at: typeof data.updated_at === "string" ? data.updated_at : "",
@@ -337,6 +355,8 @@ async function buildQuestion(value: unknown, existing?: Question): Promise<Store
     correct_option: correct,
     used: existing?.used ?? false,
     last_used_on: existing?.last_used_on ?? null,
+    used_formats: existing?.used_formats ?? [],
+    metric: existing?.metric ?? "",
     created_at: existing?.created_at || now,
     updated_at: now,
   };
@@ -364,42 +384,31 @@ export async function setQuestionUsed(id: string, value: unknown) {
   const snap = await getDocument(QUESTIONS, id);
   if (!snap) throw new CatalogNotFoundError("Question not found.");
   const existing = readQuestion(snap.id, snap.data);
+  const formats = existing.type === "player"
+    ? body.used
+      ? slotFormats(existing.title, resolvePlayerMetric(existing.title, existing.metric ?? ""))
+      : []
+    : existing.used_formats ?? [];
   const stored: StoredQuestion = {
     ...questionToStored(existing),
     used: body.used,
-    last_used_on: body.used ? new Date().toISOString().slice(0, 10) : null,
+    used_formats: formats,
+    last_used_on: body.used ? todayKey() : null,
     updated_at: new Date().toISOString(),
   };
   await setDocument(QUESTIONS, id, stored);
   return readQuestion(id, stored);
 }
 
-export async function markQuestionsUsed(ids: string[], quizDate: string) {
-  for (const id of ids) {
-    const snap = await getDocument(QUESTIONS, id);
-    if (!snap) continue;
-    const existing = readQuestion(snap.id, snap.data);
-    await setDocument(QUESTIONS, id, {
-      ...questionToStored(existing),
-      used: true,
-      last_used_on: quizDate,
-      updated_at: new Date().toISOString(),
-    });
-  }
-}
-
-export async function clearQuestionsUsed(ids: string[]) {
-  for (const id of ids) {
-    const snap = await getDocument(QUESTIONS, id);
-    if (!snap) continue;
-    const existing = readQuestion(snap.id, snap.data);
-    await setDocument(QUESTIONS, id, {
-      ...questionToStored(existing),
-      used: false,
-      last_used_on: null,
-      updated_at: new Date().toISOString(),
-    });
-  }
+export async function saveQuestionUsage(question: Question, usage: { used: boolean; lastUsedOn: string | null; usedFormats: string[] }) {
+  const stored: StoredQuestion = {
+    ...questionToStored(question),
+    used: usage.used,
+    last_used_on: usage.lastUsedOn,
+    used_formats: usage.usedFormats,
+    updated_at: new Date().toISOString(),
+  };
+  await setDocument(QUESTIONS, question.id, stored);
 }
 
 function questionToStored(question: Question): StoredQuestion {
@@ -418,6 +427,8 @@ function questionToStored(question: Question): StoredQuestion {
     correct_option: question.correct_option,
     used: question.used,
     last_used_on: question.last_used_on,
+    used_formats: question.used_formats ?? [],
+    metric: question.metric ?? "",
     created_at: question.created_at,
     updated_at: question.updated_at,
   };

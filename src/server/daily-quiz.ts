@@ -1,11 +1,13 @@
 import { deleteDocument, getDocument, listDocuments, queryDocuments, setDocument } from "@/lib/firebase";
 import type { DailyQuiz, DailyQuizAnswer, DailyQuizItem, DailyQuizListResponse, DailyQuizPlayer, DailyQuizStatus } from "@/lib/daily-quiz";
-import { allQuestions, clearQuestionsUsed, getCategory, markQuestionsUsed } from "@/server/catalog";
+import { allQuestions, getCategory, saveQuestionUsage } from "@/server/catalog";
 import { CatalogInputError, CatalogNotFoundError } from "@/server/catalog";
+import type { Question } from "@/lib/questions";
 import type { Player } from "@/lib/players";
 import { getPlayer, listActivePlayers } from "@/server/players";
-import { buildStatQuestion } from "@/server/quiz-pick";
 import { correctPlayerIndexes } from "@/server/quiz-metrics";
+import { pickPlayerCategory, pickTournamentCategory, type FormatUses, type TournamentQuizAnswer } from "@/server/quiz-slots";
+import { listTournamentQuizAnswers, saveTournamentAnswerDates } from "@/server/tournaments";
 
 const COLLECTION = "dailyQuizzes";
 const STATUSES = ["pending", "active", "past"] as const;
@@ -191,25 +193,50 @@ export async function getTodayDailyQuiz() {
   return toQuiz(await refreshPast(quiz));
 }
 
-function shuffle<T>(values: T[]) {
-  const copy = [...values];
-  for (let index = copy.length - 1; index > 0; index -= 1) {
-    const swap = Math.floor(Math.random() * (index + 1));
-    [copy[index], copy[swap]] = [copy[swap], copy[index]];
+function formatUses(questions: Question[], quizzes: { items: StoredItem[] }[]): FormatUses {
+  const fromQuizzes = new Map<string, Set<string>>();
+  for (const quiz of quizzes) {
+    for (const item of quiz.items) {
+      if (!item.question_id || item.kind === "general" || item.kind === "tournament") continue;
+      const formats = fromQuizzes.get(item.question_id) ?? new Set<string>();
+      formats.add(item.format ?? "");
+      fromQuizzes.set(item.question_id, formats);
+    }
   }
-  return copy;
+  const uses: FormatUses = new Map();
+  for (const question of questions) {
+    if (question.type !== "player") continue;
+    if (question.used_formats) uses.set(question.id, new Set(question.used_formats));
+    else if (fromQuizzes.has(question.id)) uses.set(question.id, new Set(fromQuizzes.get(question.id)));
+  }
+  return uses;
 }
 
-function textOptions(question: { option_1: string | null; option_2: string | null; option_3: string | null; option_4: string | null; correct_option: number | null }): DailyQuizPlayer[] {
-  const values = [question.option_1, question.option_2, question.option_3, question.option_4];
-  return values.map((value, index) => ({
-    player_id: "",
-    name: value ?? "",
-    country: "",
-    photo_url: null,
-    correct: question.correct_option === index + 1,
-    option: index + 1,
-  }));
+function forgetQuizFormats(uses: FormatUses, quizItems: StoredItem[], otherQuizzes: { items: StoredItem[] }[]) {
+  const kept = new Map<string, Set<string>>();
+  for (const quiz of otherQuizzes) {
+    for (const item of quiz.items) {
+      if (!item.question_id || item.kind === "general" || item.kind === "tournament") continue;
+      const formats = kept.get(item.question_id) ?? new Set<string>();
+      formats.add(item.format ?? "");
+      kept.set(item.question_id, formats);
+    }
+  }
+  for (const item of quizItems) {
+    if (!item.question_id || item.kind === "general" || item.kind === "tournament") continue;
+    const formats = uses.get(item.question_id);
+    if (!formats) continue;
+    if (!kept.get(item.question_id)?.has(item.format ?? "")) formats.delete(item.format ?? "");
+    if (formats.size === 0) uses.delete(item.question_id);
+  }
+}
+
+function sameFormats(left: Set<string> | undefined, right: string[] | undefined) {
+  const stored = new Set(right ?? []);
+  const next = left ?? new Set<string>();
+  if (stored.size !== next.size) return false;
+  for (const format of stored) if (!next.has(format)) return false;
+  return true;
 }
 
 export async function generateDailyQuiz(value: unknown) {
@@ -243,64 +270,113 @@ export async function generateDailyQuiz(value: unknown) {
 
   const questions = await allQuestions();
   const players = await listActivePlayers();
+  const quizzes = await allQuizzes();
+  const existing = quizzes.find((quiz) => quiz.quiz_date === quizDate);
+  const uses = formatUses(questions, quizzes);
+  if (existing) forgetQuizFormats(uses, existing.items, quizzes.filter((quiz) => quiz.id !== existing.id));
+  const generalLastUsed = new Map(questions.filter((question) => question.type === "general").map((question) => [question.id, question.last_used_on]));
+  if (existing) {
+    for (const item of existing.items) {
+      if (item.kind === "general" && item.question_id) generalLastUsed.set(item.question_id, null);
+    }
+  }
+  const questionById = new Map(questions.map((question) => [question.id, question]));
+  const loadedAnswers = await listTournamentQuizAnswers();
+  const originalAnswers = new Map(loadedAnswers.map((answer) => [answer.id, answer.lastUsedOn]));
+  const answers: TournamentQuizAnswer[] = loadedAnswers.map((answer) => {
+    const question = questionById.get(answer.questionId);
+    return {
+      ...answer,
+      questionTitle: question?.title || answer.questionTitle,
+      questionCategoryId: question?.category_id || answer.questionCategoryId,
+      questionStatus: question?.status || answer.questionStatus,
+      lastUsedOn: existing && answer.lastUsedOn === quizDate ? null : answer.lastUsedOn,
+    };
+  });
   const items: StoredItem[] = [];
   const usedSubjects = new Set<string>();
+  const today = todayUTC();
   for (const allocation of allocations) {
-    const pool = shuffle(
-      questions.filter((question) => question.category_id === allocation.category_id && question.status === "active"),
-    );
-    const unused = pool.filter((question) => !question.used);
-    const ordered = [...unused, ...pool.filter((question) => question.used)];
-    if (ordered.length === 0) throw new CatalogInputError(`${allocation.name} has no question templates`);
-    let made = 0;
-    const pickedIds = new Set<string>();
-    for (const question of ordered) {
-      if (made >= allocation.count) break;
-      if (pickedIds.has(question.id)) continue;
-      const hasText = Boolean(question.option_1 && question.option_2 && question.option_3 && question.option_4 && question.correct_option);
-      if (hasText && (question.type === "general" || question.type === "tournament")) {
-        pickedIds.add(question.id);
+    const active = questions.filter((question) => question.category_id === allocation.category_id && question.status === "active");
+    const hasPlayer = active.some((question) => question.type === "player" || question.type === "general");
+    const hasTournament = active.some((question) => question.type === "tournament");
+    if (!hasPlayer && answers.some((answer) => answer.questionCategoryId === allocation.category_id && answer.questionStatus === "active")) {
+      const picked = pickTournamentCategory(answers, allocation.category_id, allocation.count, quizDate);
+      if (picked.answers === 0) throw new CatalogInputError(`${allocation.name} has no completed tournament answers`);
+      if (picked.items.length < allocation.count) {
+        throw new CatalogInputError(`${allocation.name} does not have enough completed tournament answers`);
+      }
+      for (const item of picked.items) {
         items.push({
           id: crypto.randomUUID(),
-          question_id: question.id,
-          title: question.title,
-          format: "",
-          metric: question.type,
-          kind: question.type,
+          question_id: item.questionId,
+          title: item.title,
+          format: item.format,
+          metric: item.metric,
+          kind: item.kind,
           category_name: allocation.name,
-          country: "",
-          options: textOptions(question),
+          country: item.country,
+          options: item.options,
         });
-        made += 1;
-        continue;
       }
-      const built = buildStatQuestion(question.title, question.metric ?? "", players, usedSubjects);
-      if (!built) continue;
-      pickedIds.add(question.id);
-      const kind = question.type === "general" ? "general" : question.type === "tournament" ? "tournament" : "player_stat";
+      continue;
+    }
+    if (!hasPlayer && hasTournament) throw new CatalogInputError(`${allocation.name} has no completed tournament answers`);
+    if (!hasPlayer) throw new CatalogInputError(`${allocation.name} has no question templates`);
+    const picked = pickPlayerCategory({
+      questions,
+      categoryId: allocation.category_id,
+      count: allocation.count,
+      players,
+      uses,
+      usedSubjects,
+      generalLastUsed,
+      today,
+    });
+    if (picked.templates === 0) throw new CatalogInputError(`${allocation.name} has no question templates`);
+    if (picked.items.length < allocation.count) {
+      throw new CatalogInputError(`${allocation.name} does not have enough questions whose stats can make a fair set of options`);
+    }
+    for (const item of picked.items) {
       items.push({
         id: crypto.randomUUID(),
-        question_id: question.id,
-        title: built.title,
-        format: built.format,
-        metric: built.metric,
-        kind,
+        question_id: item.questionId,
+        title: item.title,
+        format: item.format,
+        metric: item.metric,
+        kind: item.kind,
         category_name: allocation.name,
-        country: built.country,
-        options: built.options,
+        country: item.country,
+        options: item.options,
       });
-      made += 1;
-    }
-    if (made < allocation.count) {
-      throw new CatalogInputError(`${allocation.name} does not have enough questions whose stats can make a fair set of options`);
     }
   }
 
-  const existing = (await allQuizzes()).find((quiz) => quiz.quiz_date === quizDate);
-  const previousIds = existing?.items.map((item) => item.question_id).filter(Boolean) ?? [];
-  const nextIds = items.map((item) => item.question_id);
-  await clearQuestionsUsed(previousIds.filter((id) => !nextIds.includes(id)));
-  await markQuestionsUsed(nextIds, quizDate);
+  for (const question of questions) {
+    if (question.type === "player") {
+      const formats = [...(uses.get(question.id) ?? [])];
+      const hadFormats = question.used_formats != null;
+      if (hadFormats && sameFormats(uses.get(question.id), question.used_formats)) continue;
+      if (!hadFormats && formats.length === 0 && !question.used) continue;
+      const touched = items.some((item) => item.question_id === question.id) || existing?.items.some((item) => item.question_id === question.id);
+      if (!touched && hadFormats) continue;
+      await saveQuestionUsage(question, {
+        used: formats.length > 0,
+        lastUsedOn: formats.length > 0 ? (items.some((item) => item.question_id === question.id) ? quizDate : question.last_used_on) : null,
+        usedFormats: formats,
+      });
+      continue;
+    }
+    if (question.type !== "general") continue;
+    const last = generalLastUsed.get(question.id) ?? null;
+    if (last === question.last_used_on) continue;
+    await saveQuestionUsage(question, { used: last === today, lastUsedOn: last, usedFormats: [] });
+  }
+  const answerUpdates = answers.flatMap((answer) => {
+    if (answer.lastUsedOn === originalAnswers.get(answer.id)) return [];
+    return [{ tournamentId: answer.tournamentId, answerId: answer.id, lastUsedOn: answer.lastUsedOn }];
+  });
+  await saveTournamentAnswerDates(answerUpdates);
 
   const now = new Date().toISOString();
   if (existing) {
@@ -342,7 +418,31 @@ export async function deleteDailyQuiz(id: string) {
   const snap = await getDocument(COLLECTION, id);
   if (!snap) throw new CatalogNotFoundError("Daily quiz not found.");
   const quiz = readQuiz(snap.id, snap.data);
-  await clearQuestionsUsed(quiz.items.map((item) => item.question_id).filter(Boolean));
+  const questions = await allQuestions();
+  const quizzes = await allQuizzes();
+  const uses = formatUses(questions, quizzes);
+  forgetQuizFormats(uses, quiz.items, quizzes.filter((item) => item.id !== quiz.id));
+  for (const question of questions) {
+    const onQuiz = quiz.items.some((item) => item.question_id === question.id);
+    if (!onQuiz) continue;
+    if (question.type === "player") {
+      const formats = [...(uses.get(question.id) ?? [])];
+      await saveQuestionUsage(question, {
+        used: formats.length > 0,
+        lastUsedOn: formats.length > 0 ? question.last_used_on : null,
+        usedFormats: formats,
+      });
+    }
+    if (question.type === "general") {
+      await saveQuestionUsage(question, { used: false, lastUsedOn: null, usedFormats: [] });
+    }
+  }
+  const answers = await listTournamentQuizAnswers();
+  await saveTournamentAnswerDates(
+    answers
+      .filter((answer) => answer.lastUsedOn === quiz.quiz_date)
+      .map((answer) => ({ tournamentId: answer.tournamentId, answerId: answer.id, lastUsedOn: null })),
+  );
   await deleteDocument(COLLECTION, id);
 }
 

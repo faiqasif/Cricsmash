@@ -168,6 +168,7 @@ export type Question = {
   correct_option: number | null;
   used: boolean;
   last_used_on: string | null;
+  used_formats?: string[];
   metric?: string;
   created_at: string;
   updated_at: string;

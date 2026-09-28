@@ -269,6 +269,52 @@ export async function deleteTournament(id: string) {
   await deleteDocument(COLLECTION, id);
 }
 
+export async function listTournamentQuizAnswers() {
+  const tournaments = await allTournaments();
+  return tournaments.flatMap((tournament) =>
+    tournament.answers.map((answer) => ({
+      id: answer.id,
+      tournamentId: tournament.id,
+      tournamentName: tournament.name,
+      questionId: answer.question_id,
+      questionTitle: answer.question_title,
+      questionCategoryId: answer.question_category_id,
+      questionStatus: answer.question_status,
+      option1: answer.option_1,
+      option2: answer.option_2,
+      option3: answer.option_3,
+      option4: answer.option_4,
+      correctOption: answer.correct_option,
+      lastUsedOn: answer.last_used_on,
+    })),
+  );
+}
+
+export async function saveTournamentAnswerDates(updates: { tournamentId: string; answerId: string; lastUsedOn: string | null }[]) {
+  const byTournament = new Map<string, Map<string, string | null>>();
+  for (const update of updates) {
+    const answers = byTournament.get(update.tournamentId) ?? new Map<string, string | null>();
+    answers.set(update.answerId, update.lastUsedOn);
+    byTournament.set(update.tournamentId, answers);
+  }
+  for (const [id, answers] of byTournament) {
+    const snap = await getDocument(COLLECTION, id);
+    if (!snap) continue;
+    const tournament = readTournament(snap.id, snap.data);
+    const next = tournament.answers.map((answer) => {
+      if (!answers.has(answer.id)) return answer;
+      const lastUsedOn = answers.get(answer.id) ?? null;
+      return { ...answer, last_used_on: lastUsedOn, used: Boolean(lastUsedOn) };
+    });
+    await setDocument(COLLECTION, id, {
+      name: tournament.name,
+      answers: next,
+      created_at: tournament.created_at,
+      updated_at: new Date().toISOString(),
+    });
+  }
+}
+
 export async function resetTournamentUsed() {
   const tournaments = await allTournaments();
   for (const tournament of tournaments) {

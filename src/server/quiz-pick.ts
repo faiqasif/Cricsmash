@@ -279,32 +279,17 @@ function pickFourPlayers(players: Player[], format: string, country: string, met
     { distinctCountries: true, maxEraSpan: 10, looseStat: false },
     { distinctCountries: true, maxEraSpan: 12, looseStat: true },
     { distinctCountries: true, maxEraSpan: 16, looseStat: true },
-    { distinctCountries: false, maxEraSpan: 12, looseStat: true },
-    { distinctCountries: false, maxEraSpan: 24, looseStat: true },
+    { distinctCountries: true, maxEraSpan: 24, looseStat: true },
   ];
+  if (distinctCountries(pool) < 4) {
+    attempts.push(
+      { distinctCountries: false, maxEraSpan: 12, looseStat: true },
+      { distinctCountries: false, maxEraSpan: 24, looseStat: true },
+    );
+  }
   for (const attempt of attempts) {
     const quartet = findHardQuartet(pool, format, country, metric, attempt);
     if (quartet && hasUniqueCorrect(quartet, format, country, metric, "")) return shuffle(quartet);
-  }
-  for (let attempt = 0; attempt < 96; attempt += 1) {
-    const ordered = shuffle(pool);
-    const out: Player[] = [];
-    const usedCountry = new Set<string>();
-    const usedId = new Set<string>();
-    for (const item of ordered) {
-      if (out.length === 4) break;
-      if (usedCountry.has(item.player.country)) continue;
-      out.push(item.player);
-      usedCountry.add(item.player.country);
-      usedId.add(item.player.id);
-    }
-    for (const item of ordered) {
-      if (out.length === 4) break;
-      if (usedId.has(item.player.id)) continue;
-      out.push(item.player);
-      usedId.add(item.player.id);
-    }
-    if (out.length === 4 && hasUniqueCorrect(out, format, country, metric, "")) return shuffle(out);
   }
   return null;
 }
@@ -322,16 +307,37 @@ function pickCountryAndPlayers(title: string, players: Player[], format: string,
   return { country: "", players: null };
 }
 
-function pickNearDebutYear(candidates: Player[], format: string, year: number, count: number) {
+function takeSpread(players: Player[], count: number, blockedCountries: Set<string>) {
+  const picked: Player[] = [];
+  const countries = new Set(blockedCountries);
+  const used = new Set<string>();
+  for (const player of players) {
+    if (picked.length === count) break;
+    if (countries.has(player.country)) continue;
+    picked.push(player);
+    used.add(player.id);
+    countries.add(player.country);
+  }
+  for (const player of players) {
+    if (picked.length === count) break;
+    if (used.has(player.id)) continue;
+    picked.push(player);
+    used.add(player.id);
+  }
+  return picked.length === count ? picked : null;
+}
+
+function pickNearDebutYear(candidates: Player[], format: string, year: number, count: number, blockedCountries = new Set<string>()) {
   const items = candidates.flatMap((player) => {
     const debut = playerDebutYear(player, format);
     return debut == null ? [] : [{ player, dist: Math.abs(debut - year) }];
   }).sort((left, right) => left.dist - right.dist);
   for (const limit of [5, 8, 10, 12, 16, 24]) {
     const near = items.filter((item) => item.dist <= limit).map((item) => item.player);
-    if (near.length >= count) return shuffle(near).slice(0, count);
+    const spread = takeSpread(near, count, blockedCountries);
+    if (spread) return spread;
   }
-  return items.length >= count ? items.slice(0, count).map((item) => item.player) : null;
+  return takeSpread(items.map((item) => item.player), count, blockedCountries);
 }
 
 function pickExactDebutYear(players: Player[], format: string, year: number) {
@@ -345,9 +351,11 @@ function pickExactDebutYear(players: Player[], format: string, year: number) {
   }
   if (matches.length < 1 || others.length < 3) return null;
   const correct = pickNearDebutYear(matches, format, year, 1);
-  const wrong = pickNearDebutYear(others, format, year, 3);
-  if (!correct || !wrong) return null;
-  return shuffle([correct[0], wrong[0], wrong[1], wrong[2]].filter((player): player is Player => Boolean(player)));
+  const wrong = correct?.[0] ? pickNearDebutYear(others, format, year, 3, new Set([correct[0].country])) : null;
+  if (!correct?.[0] || !wrong) return null;
+  const options = [correct[0], wrong[0], wrong[1], wrong[2]].filter((player): player is Player => Boolean(player));
+  if (new Set(options.map((player) => player.country)).size < 4) return null;
+  return shuffle(options);
 }
 
 function pickDynamicDebutYear(players: Player[], format: string) {
@@ -362,6 +370,15 @@ function pickDynamicDebutYear(players: Player[], format: string) {
   return null;
 }
 
+function eraSpan(players: Player[], format: string) {
+  const years = players.flatMap((player) => {
+    const year = playerEraYear(player, format);
+    return year == null ? [] : [year];
+  });
+  if (years.length < 3) return 0;
+  return Math.max(...years) - Math.min(...years);
+}
+
 function pickClosestAverageBelow(players: Player[], format: string) {
   const key = format || "odi";
   for (const target of [50, 45, 40, 55, 35, 60, 48, 52]) {
@@ -373,16 +390,17 @@ function pickClosestAverageBelow(players: Player[], format: string) {
     }).sort((left, right) => left.dist - right.dist);
     if (rows.length < 4) continue;
     const title = `batting average closest to ${formatQuizNumber(target)}`;
-    const tryWindow = (needCountries: boolean) => {
+    const tryWindow = (needCountries: boolean, maxEra: number) => {
       for (let start = 0; start + 4 <= rows.length; start += 1) {
         const out = rows.slice(start, start + 4).map((row) => row.player);
         if (needCountries && new Set(out.map((player) => player.country)).size < 4) continue;
+        if (eraSpan(out, key) > maxEra) continue;
         if (!hasUniqueCorrect(out, key, "", METRIC.battingAvgClosest50, title)) continue;
         return shuffle(out);
       }
       return null;
     };
-    const picked = tryWindow(true) ?? tryWindow(false);
+    const picked = tryWindow(true, 12) ?? tryWindow(true, 16) ?? tryWindow(true, 24);
     if (picked) return { target, players: picked };
   }
   return null;
@@ -401,9 +419,11 @@ function pickDebutRelation(players: Player[], subject: Player, format: string, r
   }
   if (matches.length < 1 || others.length < 3) return null;
   const correct = pickNearDebutYear(matches, format, year, 1);
-  const wrong = pickNearDebutYear(others, format, year, 3);
-  if (!correct || !wrong) return null;
-  return shuffle([correct[0], wrong[0], wrong[1], wrong[2]].filter((player): player is Player => Boolean(player)));
+  const wrong = correct?.[0] ? pickNearDebutYear(others, format, year, 3, new Set([correct[0].country])) : null;
+  if (!correct?.[0] || !wrong) return null;
+  const options = [correct[0], wrong[0], wrong[1], wrong[2]].filter((player): player is Player => Boolean(player));
+  if (new Set(options.map((player) => player.country)).size < 4) return null;
+  return shuffle(options);
 }
 
 function stableChoice(id: string, extra: string, options: string[]) {
@@ -569,16 +589,6 @@ function namedStatItem(title: string, format: string, metric: string, player: Pl
     correctAt = labels.indexOf(answer) + 1;
   } else {
     let value = playerStatValue(player, format, country, metric);
-    if (!usableStat(metric, value) && format) {
-      for (const alt of ["odi", "t20", "test"]) {
-        if (alt === format) continue;
-        const next = playerStatValue(player, alt, country, metric);
-        if (usableStat(metric, next)) {
-          value = next;
-          break;
-        }
-      }
-    }
     if (!usableStat(metric, value) || value == null) return null;
     if (yearMetric(metric) && value > new Date().getUTCFullYear()) return null;
     const answer = formatPlayerStatAnswer(metric, value);
@@ -597,10 +607,12 @@ function namedStatItem(title: string, format: string, metric: string, player: Pl
   };
 }
 
-export function buildStatQuestion(title: string, storedMetric: string, players: Player[], usedSubjects: Set<string>): BuiltQuizQuestion | null {
+export function buildStatQuestion(title: string, storedMetric: string, players: Player[], usedSubjects: Set<string>, lockedFormat?: string): BuiltQuizQuestion | null {
   const metric = resolvePlayerMetric(title, storedMetric);
   if (!metric) return null;
-  const formats = shuffle(slotFormats(title, metric));
+  const available = slotFormats(title, metric);
+  const formats = lockedFormat == null ? shuffle(available) : available.includes(lockedFormat) ? [lockedFormat] : [];
+  if (!formats.length) return null;
   const relation = subjectDebutRelation(title);
   if (relation) {
     for (const format of formats) {
