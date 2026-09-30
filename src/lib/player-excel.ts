@@ -34,7 +34,6 @@ export async function buildPlayerWorkbook(customFields: Pick<PlayerCustomField, 
   header.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF6D4DFF" } };
   header.alignment = { vertical: "middle", wrapText: true };
   sheet.autoFilter = { from: { row: 1, column: 1 }, to: { row: 1, column: columns.length } };
-  sheet.getCell(1, 1).note = "Keep this header row. Add one player per row below it. Blank cells stay empty. Import the Players sheet.";
 
   columns.forEach((column, index) => {
     const list = columnList(column);
@@ -94,42 +93,106 @@ export async function downloadPlayerTemplate(customFields: Pick<PlayerCustomFiel
   URL.revokeObjectURL(url);
 }
 
-function plainCell(value: unknown) {
-  if (value == null) return null;
-  if (typeof value === "object" && value !== null && "result" in value && !("text" in value) && !("richText" in value)) {
-    return (value as { result: unknown }).result;
+function decodeXml(value: string) {
+  return value
+    .replace(/&#(\d+);/g, (_, code: string) => String.fromCharCode(Number(code)))
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, "\"")
+    .replace(/&apos;/g, "'")
+    .replace(/&amp;/g, "&");
+}
+
+function textNodes(xml: string) {
+  return [...xml.matchAll(/<t[^>]*>([\s\S]*?)<\/t>/g)].map((match) => decodeXml(match[1] ?? "")).join("");
+}
+
+async function sharedStrings(zip: { file: (name: string) => { async: (type: "string") => Promise<string> } | null }) {
+  const entry = zip.file("xl/sharedStrings.xml");
+  if (!entry) return [];
+  const xml = await entry.async("string");
+  return [...xml.matchAll(/<si\b[^>]*>([\s\S]*?)<\/si>/g)].map((match) => textNodes(match[1] ?? ""));
+}
+
+function sheetPath(target: string) {
+  const clean = target.replace(/^\//, "");
+  if (clean.startsWith("xl/")) return clean;
+  return `xl/${clean.replace(/^\.\.\//, "")}`;
+}
+
+function cellValue(attrs: string, inner: string, strings: string[]) {
+  const type = /(?:^|\s)t="([^"]+)"/.exec(attrs)?.[1] ?? "";
+  if (type === "inlineStr") return textNodes(inner);
+  const raw = /<v>([\s\S]*?)<\/v>/.exec(inner)?.[1];
+  if (raw == null) return "";
+  const text = decodeXml(raw);
+  if (type === "s") return strings[Number(text)] ?? "";
+  if (type === "b") return text === "1" ? "yes" : "no";
+  if (type === "str") return text;
+  const number = Number(text);
+  return Number.isFinite(number) ? number : text;
+}
+
+async function readSheetTable(file: ArrayBuffer) {
+  const JSZip = (await import("jszip")).default;
+  const zip = await JSZip.loadAsync(file);
+  const workbook = await zip.file("xl/workbook.xml")?.async("string");
+  const rels = await zip.file("xl/_rels/workbook.xml.rels")?.async("string");
+  if (!workbook || !rels) throw new Error("This file is not an Excel workbook.");
+  const attr = (tag: string, name: string) => new RegExp(`(?:^|\\s)${name}="([^"]*)"`).exec(tag)?.[1] ?? "";
+  const sheets = [...workbook.matchAll(/<sheet\b[^>]*>/g)].map((match) => ({
+    name: decodeXml(attr(match[0], "name")),
+    id: attr(match[0], "r:id"),
+  }));
+  const targets = new Map(
+    [...rels.matchAll(/<Relationship\b[^>]*>/g)].map((match) => [attr(match[0], "Id"), attr(match[0], "Target")]),
+  );
+  const chosen = sheets.find((sheet) => sheet.name === PLAYERS_SHEET) ?? sheets[0];
+  const target = chosen ? targets.get(chosen.id) : "";
+  if (!chosen || !target) throw new Error("The file has no sheets.");
+  const sheetXml = await zip.file(sheetPath(target))?.async("string");
+  if (!sheetXml) throw new Error("The Players sheet could not be read.");
+  const strings = await sharedStrings(zip);
+  const rows = new Map<number, Record<number, string | number>>();
+  for (const row of sheetXml.matchAll(/<row\b[^>]*\br="(\d+)"[^>]*>([\s\S]*?)<\/row>/g)) {
+    const rowNumber = Number(row[1]);
+    const cells: Record<number, string | number> = {};
+    for (const cell of (row[2] ?? "").matchAll(/<c\b([^>]*?)(?:\/>|>([\s\S]*?)<\/c>)/g)) {
+      const ref = /(?:^|\s)r="([A-Z]+)\d+"/.exec(cell[1] ?? "")?.[1] ?? "";
+      if (!ref) continue;
+      let index = 0;
+      for (const letter of ref) index = index * 26 + (letter.charCodeAt(0) - 64);
+      const value = cellValue(cell[1] ?? "", cell[2] ?? "", strings);
+      if (value !== "") cells[index] = value;
+    }
+    if (Object.keys(cells).length) rows.set(rowNumber, cells);
   }
-  return value;
+  return rows;
 }
 
 export async function readPlayerWorkbook(
   file: ArrayBuffer,
   customFields: Pick<PlayerCustomField, "id" | "name">[] = [],
 ): Promise<{ rows: ParsedPlayerRow[]; ignoredColumns: string[] }> {
-  const ExcelJS = (await import("exceljs")).default;
-  const workbook = new ExcelJS.Workbook();
-  await workbook.xlsx.load(file);
-  const sheet = workbook.getWorksheet(PLAYERS_SHEET) ?? workbook.worksheets[0];
-  if (!sheet) throw new Error("The file has no sheets.");
-  const header = sheet.getRow(1);
-  const headers: string[] = [];
-  header.eachCell({ includeEmpty: false }, (cell, index) => {
-    headers[index] = String(cell.value ?? "").trim();
-  });
+  const grid = await readSheetTable(file);
+  const header = grid.get(1);
+  if (!header) throw new Error("The first row must be the template header. Download the template and keep that row.");
+  const headers = new Map<number, string>();
+  for (const [index, value] of Object.entries(header)) headers.set(Number(index), String(value).trim());
   const columns = playerColumns(customFields);
-  const recognized = headers.some((item) => columns.some((column) => column.key.toLowerCase() === item.toLowerCase() || column.label.toLowerCase() === item.toLowerCase()));
-  if (!recognized) {
-    throw new Error("The first row must be the template header. Download the template and keep that row.");
-  }
+  const recognized = [...headers.values()].some((item) =>
+    columns.some((column) => column.key.toLowerCase() === item.toLowerCase() || column.label.toLowerCase() === item.toLowerCase()),
+  );
+  if (!recognized) throw new Error("The first row must be the template header. Download the template and keep that row.");
   const table: { row: number; cells: Record<string, unknown> }[] = [];
-  sheet.eachRow((excelRow, rowNumber) => {
-    if (rowNumber === 1) return;
-    const cells: Record<string, unknown> = {};
-    headers.forEach((name, index) => {
-      if (!name) return;
-      cells[name] = plainCell(excelRow.getCell(index).value);
-    });
-    table.push({ row: rowNumber, cells });
-  });
+  for (const [rowNumber, cells] of grid) {
+    if (rowNumber === 1) continue;
+    const record: Record<string, unknown> = {};
+    for (const [index, value] of Object.entries(cells)) {
+      const name = headers.get(Number(index));
+      if (name) record[name] = value;
+    }
+    table.push({ row: rowNumber, cells: record });
+  }
   return parsePlayerRows(table, customFields);
 }

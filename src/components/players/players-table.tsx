@@ -159,11 +159,9 @@ export function PlayersTable({
                   <td className="px-5 py-4">
                     <div className="flex items-center gap-3">
                       {player.photo_url ? (
-                        <Image
+                        <img
                           src={player.photo_url}
                           alt={player.name}
-                          width={40}
-                          height={40}
                           className="size-10 rounded-full object-cover"
                         />
                       ) : (

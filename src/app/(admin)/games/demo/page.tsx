@@ -255,11 +255,9 @@ function QuizCard({
                   {["A", "B", "C", "D"][index] ?? index + 1}
                 </span>
               ) : player.photo_url ? (
-                <Image
+                <img
                   src={player.photo_url}
                   alt={player.name}
-                  width={44}
-                  height={44}
                   className="size-11 rounded-full object-cover"
                 />
               ) : (

@@ -210,8 +210,8 @@ function asText(value: unknown) {
 function asNumber(value: unknown, label: string, errors: string[]) {
   if (blank(value)) return null;
   if (typeof value === "number" && Number.isFinite(value)) return value;
-  const text = asText(value).replace(/,/g, "");
-  if (!text) return null;
+  const text = asText(value).replace(/,/g, "").replace(/\*$/, "").trim();
+  if (!text || text === "-" || text === "—" || text.toLowerCase() === "n/a" || text.toLowerCase() === "dnb") return null;
   const parsed = Number(text);
   if (!Number.isFinite(parsed)) {
     errors.push(`${label} must be a number`);
