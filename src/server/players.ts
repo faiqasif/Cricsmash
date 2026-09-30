@@ -1,5 +1,5 @@
 import { rankByName } from "@/lib/fuzzy";
-import { deleteDocument, getDocument, listDocuments, patchDocuments, queryDocuments, setDocument } from "@/lib/firebase";
+import { deleteDocument, getDocument, listDocuments, patchDocuments, queryDocuments, setDocument, setDocuments } from "@/lib/firebase";
 import type {
   FormatStats,
   Player,
@@ -398,6 +398,38 @@ export async function getPlayer(id: string) {
   const snap = await getDocument(PLAYERS, id);
   if (!snap) throw new PlayerNotFoundError();
   return readPlayer(snap.id, snap.data);
+}
+
+export async function importPlayers(rows: { row: number; player: unknown }[]) {
+  if (!Array.isArray(rows) || rows.length === 0) throw new PlayerInputError("Add at least one player");
+  if (rows.length > 200) throw new PlayerInputError("Import up to 200 players at a time");
+  const existing = await allPlayers();
+  const seen = new Set(existing.map((player) => `${player.name.trim().toLowerCase()}|${player.country.trim().toLowerCase()}`));
+  const ready: { row: number; id: string; name: string; data: ReturnType<typeof toStored> }[] = [];
+  const failed: { row: number; message: string }[] = [];
+  for (const entry of rows) {
+    const row = typeof entry?.row === "number" ? entry.row : 0;
+    try {
+      const payload = parsePlayerPayload(entry?.player);
+      const key = `${payload.name.trim().toLowerCase()}|${payload.country.trim().toLowerCase()}`;
+      if (seen.has(key)) {
+        failed.push({ row, message: "A player with this name and country is already saved" });
+        continue;
+      }
+      seen.add(key);
+      const now = new Date().toISOString();
+      ready.push({ row, id: crypto.randomUUID(), name: payload.name, data: toStored(payload, now, now) });
+    } catch (err) {
+      failed.push({ row, message: err instanceof PlayerInputError ? err.message : "This row could not be saved" });
+    }
+  }
+  if (ready.length) {
+    await setDocuments(PLAYERS, ready.map((item) => ({ id: item.id, data: item.data })));
+  }
+  return {
+    saved: ready.map((item) => ({ row: item.row, id: item.id, name: item.name })),
+    failed,
+  };
 }
 
 export async function createPlayer(payload: PlayerPayload) {

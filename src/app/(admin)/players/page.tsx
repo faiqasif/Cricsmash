@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { ConfirmDeleteModal, openConfirm } from "@/components/ui/confirm-delete-modal";
+import { PlayerImportActions } from "@/components/players/player-import-modal";
 import { PlayersTable } from "@/components/players/players-table";
 import { api } from "@/lib/api";
 import type { PlayerListItem, PlayerListResponse } from "@/lib/players";
@@ -85,6 +86,7 @@ export default function PlayersPage() {
         }}
         onPageChange={setPage}
         onDelete={(player) => openConfirm(setPendingDelete, player)}
+        importActions={<PlayerImportActions onSaved={load} />}
       />
       <ConfirmDeleteModal
         open={Boolean(pendingDelete)}

@@ -7,6 +7,7 @@ import { HeaderActions } from "@/components/layout/header-actions";
 import { useOpenMenu } from "@/components/layout/admin-shell";
 import { COUNTRIES, ROLES, flagUrl, roleLabel } from "@/data/cricket";
 import type { PlayerListItem } from "@/lib/players";
+import type { ReactNode } from "react";
 
 function initials(name: string) {
   return name
@@ -36,6 +37,7 @@ type PlayersTableProps = {
   onCountryChange: (value: string) => void;
   onPageChange: (page: number) => void;
   onDelete: (player: PlayerListItem) => void;
+  importActions?: ReactNode;
 };
 
 export function PlayersTable({
@@ -53,6 +55,7 @@ export function PlayersTable({
   onCountryChange,
   onPageChange,
   onDelete,
+  importActions,
 }: PlayersTableProps) {
   const empty = !loading && players.length === 0;
   const countryOptions = COUNTRIES;
@@ -111,6 +114,7 @@ export function PlayersTable({
           ))}
         </FilterSelect>
 
+        {importActions}
         <Link
           href="/players/new"
           className="inline-flex h-12 shrink-0 items-center justify-center gap-2 rounded-full bg-purple px-6 text-sm font-medium text-white shadow-[0_0_24px_rgba(124,92,255,0.4)] transition hover:bg-[#6d4dff]"

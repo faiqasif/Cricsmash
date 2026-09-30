@@ -215,6 +215,23 @@ export async function getDocument(collectionName: string, id: string): Promise<S
   }
 }
 
+export async function setDocuments(collectionName: string, docs: { id: string; data: Json }[]) {
+  for (let index = 0; index < docs.length; index += 400) {
+    const writes = docs.slice(index, index + 400).map((doc) => {
+      const encoded = encode(doc.data);
+      const fields = "mapValue" in encoded ? encoded.mapValue.fields ?? {} : {};
+      return {
+        update: {
+          name: `projects/${projectId()}/databases/(default)/documents/${collectionName}/${doc.id}`,
+          fields,
+        },
+      };
+    });
+    const url = new URL(`${documentsBase()}:commit`);
+    await firebaseFetch(url, { method: "POST", body: JSON.stringify({ writes }) });
+  }
+}
+
 export async function setDocument(collectionName: string, id: string, data: Json) {
   const encoded = encode(data);
   if (!("mapValue" in encoded)) throw new Error("Player document must be an object");
