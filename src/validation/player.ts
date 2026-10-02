@@ -502,7 +502,7 @@ const FORMAT_KINDS: Record<keyof FormatStats, "int" | "float" | "text"> = {
   stumpings: "int",
 };
 
-function toFormatPayload(form: FormFormat, role: string, format: "odi" | "t20" | "test"): FormatStats {
+function toFormatPayload(form: FormFormat, role: string): FormatStats {
   const battingVisible = showsBatting(role);
   const bowlingVisible = showsBowling(role);
   const keepingVisible = showsKeeping(role);
@@ -515,8 +515,7 @@ function toFormatPayload(form: FormFormat, role: string, format: "odi" | "t20" |
       (key === "wickets" && !wicketsVisible) ||
       (key !== "hundreds" && BATTING_KEYS.includes(key) && !battingVisible) ||
       (key !== "wickets" && BOWLING_KEYS.includes(key) && !bowlingVisible) ||
-      (KEEPING_KEYS.includes(key) && !keepingVisible) ||
-      (key === "batting_position" && format === "t20");
+      (KEEPING_KEYS.includes(key) && !keepingVisible);
     const kind = FORMAT_KINDS[key];
     if (hidden) {
       (out[key] as string | number | null) = null;
@@ -551,9 +550,9 @@ export function playerPayloadFromValues(values: PlayerFormValues, photoUrl: stri
       ? toNumber(values.most_dismissals_against_bowler_count, "int")
       : null,
     status: values.status,
-    odi: toFormatPayload(values.odi, values.role, "odi"),
-    t20: toFormatPayload(values.t20, values.role, "t20"),
-    test: toFormatPayload(values.test, values.role, "test"),
+    odi: toFormatPayload(values.odi, values.role),
+    t20: toFormatPayload(values.t20, values.role),
+    test: toFormatPayload(values.test, values.role),
     custom_fields: Object.entries(values.custom_fields).map(([fieldId, formats]) => ({
       field_id: fieldId,
       odi: formats.odi.trim() || null,

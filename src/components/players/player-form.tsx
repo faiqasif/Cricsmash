@@ -46,7 +46,7 @@ const FORMAT_ROWS: FormatRow[] = [
   { key: "highest_score", label: "Highest score", placeholder: "Enter highest score", group: "batting" },
   { key: "most_hundreds_against", label: "Most number of hundreds against which team?", placeholder: "Select team", group: "batting", input: "team" },
   { key: "sixes", label: "Number of sixes", placeholder: "Enter number of sixes", group: "batting" },
-  { key: "batting_position", label: "Which batting position did he bat the most number of times?", placeholder: "Position 1-11", group: "batting", formats: ["odi", "test"] },
+  { key: "batting_position", label: "Which batting position did he bat the most number of times?", placeholder: "Position 1-11", group: "batting" },
   { key: "wickets", label: "Number of wickets", placeholder: "Enter number of wickets", group: "bowling" },
   { key: "bowling_strike_rate", label: "Bowling strike rate", placeholder: "Enter strike rate", group: "bowling" },
   { key: "bowling_economy", label: "Economy Rate", placeholder: "Enter economy rate", group: "bowling" },
