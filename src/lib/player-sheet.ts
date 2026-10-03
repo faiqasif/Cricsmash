@@ -191,6 +191,17 @@ function blank(value: unknown) {
   return value == null || (typeof value === "string" && value.trim() === "");
 }
 
+function excelSerialDate(value: number) {
+  if (!Number.isFinite(value)) return "";
+  const serial = Math.round(value);
+  if (serial < 1 || serial > 80000) return "";
+  const date = new Date(Date.UTC(1899, 11, 30) + serial * 86400000);
+  const year = date.getUTCFullYear();
+  const month = String(date.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(date.getUTCDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
 function asText(value: unknown) {
   if (blank(value)) return "";
   if (value instanceof Date && !Number.isNaN(value.getTime())) {
@@ -355,7 +366,8 @@ export function parsePlayerRows(
         continue;
       }
       if (column.kind === "date") {
-        const text = asText(cell.value);
+        const fromSerial = typeof cell.value === "number" ? excelSerialDate(cell.value) : "";
+        const text = fromSerial || asText(cell.value);
         if (!text) payload.date_of_birth = null;
         else if (/^\d{4}-\d{2}-\d{2}$/.test(text)) payload.date_of_birth = text;
         else errors.push("Date of birth must be YYYY-MM-DD");
