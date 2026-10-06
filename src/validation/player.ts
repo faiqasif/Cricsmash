@@ -21,10 +21,16 @@ export type PlayerFormValues = {
   batting_avg_in_australia_test: string;
   batting_avg_in_england_test: string;
   batting_avg_in_south_africa_test: string;
+  batting_avg_vs_pakistan_test: string;
   batting_avg_vs_india_test: string;
   batting_avg_vs_australia_test: string;
   batting_avg_vs_england_test: string;
   batting_avg_vs_south_africa_test: string;
+  batting_avg_vs_pakistan_odi: string;
+  batting_avg_vs_india_odi: string;
+  batting_avg_vs_australia_odi: string;
+  batting_avg_vs_england_odi: string;
+  batting_avg_vs_south_africa_odi: string;
   wickets_home_test: string;
   wickets_away_test: string;
   wickets_vs_india: string;
@@ -35,6 +41,7 @@ export type PlayerFormValues = {
   wickets_in_australia: string;
   wickets_in_england: string;
   wickets_in_south_africa: string;
+  hundreds_vs_pakistan_test: string;
   hundreds_vs_india_test: string;
   hundreds_vs_australia_test: string;
   hundreds_vs_england_test: string;
@@ -43,6 +50,7 @@ export type PlayerFormValues = {
   hundreds_in_australia_test: string;
   hundreds_in_england_test: string;
   hundreds_in_south_africa_test: string;
+  hundreds_vs_pakistan_odi: string;
   hundreds_vs_india_odi: string;
   hundreds_vs_australia_odi: string;
   hundreds_vs_england_odi: string;
@@ -124,10 +132,16 @@ const BATTING_TEST_KEYS = [
   "batting_avg_in_australia_test",
   "batting_avg_in_england_test",
   "batting_avg_in_south_africa_test",
+  "batting_avg_vs_pakistan_test",
   "batting_avg_vs_india_test",
   "batting_avg_vs_australia_test",
   "batting_avg_vs_england_test",
   "batting_avg_vs_south_africa_test",
+  "batting_avg_vs_pakistan_odi",
+  "batting_avg_vs_india_odi",
+  "batting_avg_vs_australia_odi",
+  "batting_avg_vs_england_odi",
+  "batting_avg_vs_south_africa_odi",
 ] as const;
 
 const BOWLING_TEST_KEYS = [
@@ -144,6 +158,7 @@ const BOWLING_TEST_KEYS = [
 ] as const;
 
 const BATTING_EXTRA_INT_KEYS = [
+  "hundreds_vs_pakistan_test",
   "hundreds_vs_india_test",
   "hundreds_vs_australia_test",
   "hundreds_vs_england_test",
@@ -152,6 +167,7 @@ const BATTING_EXTRA_INT_KEYS = [
   "hundreds_in_australia_test",
   "hundreds_in_england_test",
   "hundreds_in_south_africa_test",
+  "hundreds_vs_pakistan_odi",
   "hundreds_vs_india_odi",
   "hundreds_vs_australia_odi",
   "hundreds_vs_england_odi",
@@ -234,10 +250,16 @@ export function playerInitialValues(player?: Player): PlayerFormValues {
     batting_avg_in_australia_test: numToForm(player?.batting_avg_in_australia_test),
     batting_avg_in_england_test: numToForm(player?.batting_avg_in_england_test),
     batting_avg_in_south_africa_test: numToForm(player?.batting_avg_in_south_africa_test),
+    batting_avg_vs_pakistan_test: numToForm(player?.batting_avg_vs_pakistan_test),
     batting_avg_vs_india_test: numToForm(player?.batting_avg_vs_india_test),
     batting_avg_vs_australia_test: numToForm(player?.batting_avg_vs_australia_test),
     batting_avg_vs_england_test: numToForm(player?.batting_avg_vs_england_test),
     batting_avg_vs_south_africa_test: numToForm(player?.batting_avg_vs_south_africa_test),
+    batting_avg_vs_pakistan_odi: numToForm(player?.batting_avg_vs_pakistan_odi),
+    batting_avg_vs_india_odi: numToForm(player?.batting_avg_vs_india_odi),
+    batting_avg_vs_australia_odi: numToForm(player?.batting_avg_vs_australia_odi),
+    batting_avg_vs_england_odi: numToForm(player?.batting_avg_vs_england_odi),
+    batting_avg_vs_south_africa_odi: numToForm(player?.batting_avg_vs_south_africa_odi),
     wickets_home_test: numToForm(player?.wickets_home_test),
     wickets_away_test: numToForm(player?.wickets_away_test),
     wickets_vs_india: numToForm(player?.wickets_vs_india),
@@ -248,6 +270,7 @@ export function playerInitialValues(player?: Player): PlayerFormValues {
     wickets_in_australia: numToForm(player?.wickets_in_australia),
     wickets_in_england: numToForm(player?.wickets_in_england),
     wickets_in_south_africa: numToForm(player?.wickets_in_south_africa),
+    hundreds_vs_pakistan_test: numToForm(player?.hundreds_vs_pakistan_test),
     hundreds_vs_india_test: numToForm(player?.hundreds_vs_india_test),
     hundreds_vs_australia_test: numToForm(player?.hundreds_vs_australia_test),
     hundreds_vs_england_test: numToForm(player?.hundreds_vs_england_test),
@@ -256,6 +279,7 @@ export function playerInitialValues(player?: Player): PlayerFormValues {
     hundreds_in_australia_test: numToForm(player?.hundreds_in_australia_test),
     hundreds_in_england_test: numToForm(player?.hundreds_in_england_test),
     hundreds_in_south_africa_test: numToForm(player?.hundreds_in_south_africa_test),
+    hundreds_vs_pakistan_odi: numToForm(player?.hundreds_vs_pakistan_odi),
     hundreds_vs_india_odi: numToForm(player?.hundreds_vs_india_odi),
     hundreds_vs_australia_odi: numToForm(player?.hundreds_vs_australia_odi),
     hundreds_vs_england_odi: numToForm(player?.hundreds_vs_england_odi),
@@ -415,10 +439,16 @@ export const playerSchema = Yup.object({
   batting_avg_in_australia_test: optionalDecimal("Enter a valid batting average"),
   batting_avg_in_england_test: optionalDecimal("Enter a valid batting average"),
   batting_avg_in_south_africa_test: optionalDecimal("Enter a valid batting average"),
+  batting_avg_vs_pakistan_test: optionalDecimal("Enter a valid batting average"),
   batting_avg_vs_india_test: optionalDecimal("Enter a valid batting average"),
   batting_avg_vs_australia_test: optionalDecimal("Enter a valid batting average"),
   batting_avg_vs_england_test: optionalDecimal("Enter a valid batting average"),
   batting_avg_vs_south_africa_test: optionalDecimal("Enter a valid batting average"),
+  batting_avg_vs_pakistan_odi: optionalDecimal("Enter a valid batting average"),
+  batting_avg_vs_india_odi: optionalDecimal("Enter a valid batting average"),
+  batting_avg_vs_australia_odi: optionalDecimal("Enter a valid batting average"),
+  batting_avg_vs_england_odi: optionalDecimal("Enter a valid batting average"),
+  batting_avg_vs_south_africa_odi: optionalDecimal("Enter a valid batting average"),
   wickets_home_test: optionalWholeNumber("Enter a valid wicket count"),
   wickets_away_test: optionalWholeNumber("Enter a valid wicket count"),
   wickets_vs_india: optionalWholeNumber("Enter a valid wicket count"),
@@ -429,6 +459,7 @@ export const playerSchema = Yup.object({
   wickets_in_australia: optionalWholeNumber("Enter a valid wicket count"),
   wickets_in_england: optionalWholeNumber("Enter a valid wicket count"),
   wickets_in_south_africa: optionalWholeNumber("Enter a valid wicket count"),
+  hundreds_vs_pakistan_test: optionalWholeNumber("Enter a valid hundreds count"),
   hundreds_vs_india_test: optionalWholeNumber("Enter a valid hundreds count"),
   hundreds_vs_australia_test: optionalWholeNumber("Enter a valid hundreds count"),
   hundreds_vs_england_test: optionalWholeNumber("Enter a valid hundreds count"),
@@ -437,6 +468,7 @@ export const playerSchema = Yup.object({
   hundreds_in_australia_test: optionalWholeNumber("Enter a valid hundreds count"),
   hundreds_in_england_test: optionalWholeNumber("Enter a valid hundreds count"),
   hundreds_in_south_africa_test: optionalWholeNumber("Enter a valid hundreds count"),
+  hundreds_vs_pakistan_odi: optionalWholeNumber("Enter a valid hundreds count"),
   hundreds_vs_india_odi: optionalWholeNumber("Enter a valid hundreds count"),
   hundreds_vs_australia_odi: optionalWholeNumber("Enter a valid hundreds count"),
   hundreds_vs_england_odi: optionalWholeNumber("Enter a valid hundreds count"),

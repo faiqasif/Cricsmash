@@ -39,6 +39,7 @@ const INTERNATIONAL_TEAMS = [
 ];
 
 const COUNTRY_OPTIONS = ["India", "Australia", "England", "South Africa"];
+const OPPONENT_OPTIONS = ["Pakistan", ...COUNTRY_OPTIONS];
 
 export type BuiltQuizQuestion = {
   title: string;
@@ -114,6 +115,8 @@ function statSpanLimit(metric: string, minValue: number) {
       METRIC.battingAvgClosest50,
       METRIC.battingAvgAway,
       METRIC.battingAvgInCountry,
+      METRIC.battingAvgVsCountryTest,
+      METRIC.battingAvgVsCountryOdi,
       METRIC.battingAvgHomeTest,
       METRIC.odiWcBattingAverage,
       METRIC.t20WcBattingAverage,
@@ -177,6 +180,8 @@ function quartetEase(items: Candidate[], format: string, country: string, metric
       METRIC.battingAvgClosest50,
       METRIC.battingAvgAway,
       METRIC.battingAvgInCountry,
+      METRIC.battingAvgVsCountryTest,
+      METRIC.battingAvgVsCountryOdi,
     ].some((value) => value === metric)
   ) {
     eraWeight = 0.5;
@@ -300,7 +305,15 @@ function pickCountryAndPlayers(title: string, players: Player[], format: string,
     return { country: "", players: pickExactDebutYear(players, format, year) };
   }
   if (!questionHasCountryToken(title)) return { country: "", players: pickFourPlayers(players, format, "", metric) };
-  for (const country of shuffle(COUNTRY_OPTIONS)) {
+  const countries = [
+    METRIC.battingAvgVsCountryTest,
+    METRIC.battingAvgVsCountryOdi,
+    METRIC.hundredsVsCountryTest,
+    METRIC.hundredsVsCountryOdi,
+  ].some((value) => value === metric)
+    ? OPPONENT_OPTIONS
+    : COUNTRY_OPTIONS;
+  for (const country of shuffle(countries)) {
     const picked = pickFourPlayers(players, format, country, metric);
     if (picked) return { country, players: picked };
   }

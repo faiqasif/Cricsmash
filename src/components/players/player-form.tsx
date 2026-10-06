@@ -8,7 +8,7 @@ import { ArrowLeft, Calendar, ChevronDown, Plus, Trash2 } from "lucide-react";
 import { ErrorText } from "@/components/form/error-text";
 import { CreateFieldModal } from "@/components/players/create-field-modal";
 import { ConfirmDeleteModal, openConfirm } from "@/components/ui/confirm-delete-modal";
-import { COUNTRIES, customAppliesToForRole, FORMAT_LABELS, FORMATS, PLAYING_HANDS, ROLES, TEST_COUNTRIES } from "@/data/cricket";
+import { COUNTRIES, customAppliesToForRole, FORMAT_LABELS, FORMATS, OPPONENT_COUNTRIES, PLAYING_HANDS, ROLES, TEST_COUNTRIES } from "@/data/cricket";
 import { api, ApiError } from "@/lib/api";
 import type { FormatKey, FormatStats, Player, PlayerCustomField } from "@/lib/players";
 import {
@@ -227,10 +227,17 @@ export function PlayerForm({ player }: PlayerFormProps) {
         "batting_avg_in_australia_test",
         "batting_avg_in_england_test",
         "batting_avg_in_south_africa_test",
+        "batting_avg_vs_pakistan_test",
         "batting_avg_vs_india_test",
         "batting_avg_vs_australia_test",
         "batting_avg_vs_england_test",
         "batting_avg_vs_south_africa_test",
+        "batting_avg_vs_pakistan_odi",
+        "batting_avg_vs_india_odi",
+        "batting_avg_vs_australia_odi",
+        "batting_avg_vs_england_odi",
+        "batting_avg_vs_south_africa_odi",
+        "hundreds_vs_pakistan_test",
         "hundreds_vs_india_test",
         "hundreds_vs_australia_test",
         "hundreds_vs_england_test",
@@ -239,6 +246,7 @@ export function PlayerForm({ player }: PlayerFormProps) {
         "hundreds_in_australia_test",
         "hundreds_in_england_test",
         "hundreds_in_south_africa_test",
+        "hundreds_vs_pakistan_odi",
         "hundreds_vs_india_odi",
         "hundreds_vs_australia_odi",
         "hundreds_vs_england_odi",
@@ -508,8 +516,10 @@ export function PlayerForm({ player }: PlayerFormProps) {
               onBlur={formik.handleBlur}
             />
             <CountryFields
-              label="Batting average vs India, Australia, England, South Africa in Tests"
+              label="Batting average vs Pakistan, India, Australia, England, South Africa in Tests"
+              countries={OPPONENT_COUNTRIES}
               names={{
+                Pakistan: "batting_avg_vs_pakistan_test",
                 India: "batting_avg_vs_india_test",
                 Australia: "batting_avg_vs_australia_test",
                 England: "batting_avg_vs_england_test",
@@ -521,8 +531,25 @@ export function PlayerForm({ player }: PlayerFormProps) {
               onBlur={formik.handleBlur}
             />
             <CountryFields
-              label="No of hundreds vs India, Australia, England, South Africa in Tests"
+              label="Batting average vs Pakistan, India, Australia, England, South Africa in ODIs"
+              countries={OPPONENT_COUNTRIES}
               names={{
+                Pakistan: "batting_avg_vs_pakistan_odi",
+                India: "batting_avg_vs_india_odi",
+                Australia: "batting_avg_vs_australia_odi",
+                England: "batting_avg_vs_england_odi",
+                "South Africa": "batting_avg_vs_south_africa_odi",
+              }}
+              values={formik.values}
+              fieldError={fieldError}
+              onChange={formik.handleChange}
+              onBlur={formik.handleBlur}
+            />
+            <CountryFields
+              label="No of hundreds vs Pakistan, India, Australia, England, South Africa in Tests"
+              countries={OPPONENT_COUNTRIES}
+              names={{
+                Pakistan: "hundreds_vs_pakistan_test",
                 India: "hundreds_vs_india_test",
                 Australia: "hundreds_vs_australia_test",
                 England: "hundreds_vs_england_test",
@@ -547,8 +574,10 @@ export function PlayerForm({ player }: PlayerFormProps) {
               onBlur={formik.handleBlur}
             />
             <CountryFields
-              label="No of hundreds vs India, Australia, England, South Africa in ODIs"
+              label="No of hundreds vs Pakistan, India, Australia, England, South Africa in ODIs"
+              countries={OPPONENT_COUNTRIES}
               names={{
+                Pakistan: "hundreds_vs_pakistan_odi",
                 India: "hundreds_vs_india_odi",
                 Australia: "hundreds_vs_australia_odi",
                 England: "hundreds_vs_england_odi",
@@ -1041,6 +1070,7 @@ function WorldCupSection({
 
 function CountryFields({
   label,
+  countries = TEST_COUNTRIES,
   names,
   values,
   fieldError,
@@ -1048,7 +1078,8 @@ function CountryFields({
   onBlur,
 }: {
   label: string;
-  names: Record<(typeof TEST_COUNTRIES)[number], keyof PlayerFormValues>;
+  countries?: readonly string[];
+  names: Record<string, keyof PlayerFormValues>;
   values: PlayerFormValues;
   fieldError: (name: string) => string | undefined;
   onChange: React.ChangeEventHandler<HTMLInputElement>;
@@ -1058,8 +1089,9 @@ function CountryFields({
     <div>
       <p className={labelClass}>{label}</p>
       <div className="grid gap-4 md:grid-cols-2">
-        {TEST_COUNTRIES.map((country) => {
+        {countries.map((country) => {
           const name = names[country];
+          if (!name) return null;
           const raw = values[name];
           return (
             <StatPill

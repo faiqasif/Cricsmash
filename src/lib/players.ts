@@ -49,10 +49,16 @@ export type Player = {
   batting_avg_in_australia_test: number | null;
   batting_avg_in_england_test: number | null;
   batting_avg_in_south_africa_test: number | null;
+  batting_avg_vs_pakistan_test: number | null;
   batting_avg_vs_india_test: number | null;
   batting_avg_vs_australia_test: number | null;
   batting_avg_vs_england_test: number | null;
   batting_avg_vs_south_africa_test: number | null;
+  batting_avg_vs_pakistan_odi: number | null;
+  batting_avg_vs_india_odi: number | null;
+  batting_avg_vs_australia_odi: number | null;
+  batting_avg_vs_england_odi: number | null;
+  batting_avg_vs_south_africa_odi: number | null;
   wickets_home_test: number | null;
   wickets_away_test: number | null;
   wickets_vs_india: number | null;
@@ -63,6 +69,7 @@ export type Player = {
   wickets_in_australia: number | null;
   wickets_in_england: number | null;
   wickets_in_south_africa: number | null;
+  hundreds_vs_pakistan_test: number | null;
   hundreds_vs_india_test: number | null;
   hundreds_vs_australia_test: number | null;
   hundreds_vs_england_test: number | null;
@@ -71,6 +78,7 @@ export type Player = {
   hundreds_in_australia_test: number | null;
   hundreds_in_england_test: number | null;
   hundreds_in_south_africa_test: number | null;
+  hundreds_vs_pakistan_odi: number | null;
   hundreds_vs_india_odi: number | null;
   hundreds_vs_australia_odi: number | null;
   hundreds_vs_england_odi: number | null;
@@ -151,10 +159,16 @@ export type PlayerPayload = {
   batting_avg_in_australia_test?: number | null;
   batting_avg_in_england_test?: number | null;
   batting_avg_in_south_africa_test?: number | null;
+  batting_avg_vs_pakistan_test?: number | null;
   batting_avg_vs_india_test?: number | null;
   batting_avg_vs_australia_test?: number | null;
   batting_avg_vs_england_test?: number | null;
   batting_avg_vs_south_africa_test?: number | null;
+  batting_avg_vs_pakistan_odi?: number | null;
+  batting_avg_vs_india_odi?: number | null;
+  batting_avg_vs_australia_odi?: number | null;
+  batting_avg_vs_england_odi?: number | null;
+  batting_avg_vs_south_africa_odi?: number | null;
   wickets_home_test?: number | null;
   wickets_away_test?: number | null;
   wickets_vs_india?: number | null;
@@ -165,6 +179,7 @@ export type PlayerPayload = {
   wickets_in_australia?: number | null;
   wickets_in_england?: number | null;
   wickets_in_south_africa?: number | null;
+  hundreds_vs_pakistan_test?: number | null;
   hundreds_vs_india_test?: number | null;
   hundreds_vs_australia_test?: number | null;
   hundreds_vs_england_test?: number | null;
@@ -173,6 +188,7 @@ export type PlayerPayload = {
   hundreds_in_australia_test?: number | null;
   hundreds_in_england_test?: number | null;
   hundreds_in_south_africa_test?: number | null;
+  hundreds_vs_pakistan_odi?: number | null;
   hundreds_vs_india_odi?: number | null;
   hundreds_vs_australia_odi?: number | null;
   hundreds_vs_england_odi?: number | null;

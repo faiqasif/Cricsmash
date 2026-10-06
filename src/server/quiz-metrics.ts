@@ -14,6 +14,8 @@ export const METRIC = {
   battingAvgClosest50: "batting_average_closest_50",
   battingAvgAway: "batting_average_away",
   battingAvgInCountry: "batting_average_in_country",
+  battingAvgVsCountryTest: "batting_average_vs_country_test",
+  battingAvgVsCountryOdi: "batting_average_vs_country_odi",
   wickets: "wickets",
   bowlingAverage: "bowling_average",
   bowlingStrikeRate: "bowling_strike_rate",
@@ -183,11 +185,14 @@ function inferCountryStatMetric(title: string, text: string) {
   const hundreds = text.includes("hundred") || text.includes("centur");
   const wickets = text.includes("wicket");
   const versus = text.includes(" vs ") || text.includes("versus") || text.includes("against");
-  if (hundreds && (text.includes("odi") || text.includes("one-day"))) return METRIC.hundredsVsCountryOdi;
+  const odi = text.includes("odi") || text.includes("one-day");
+  if (hundreds && odi) return METRIC.hundredsVsCountryOdi;
   if (hundreds && versus) return METRIC.hundredsVsCountryTest;
   if (hundreds) return METRIC.hundredsInCountryTest;
   if (wickets && versus) return METRIC.wicketsVsCountry;
   if (wickets) return METRIC.wicketsInCountry;
+  if (text.includes("average") && versus && odi) return METRIC.battingAvgVsCountryOdi;
+  if (text.includes("average") && versus) return METRIC.battingAvgVsCountryTest;
   return METRIC.battingAvgInCountry;
 }
 
@@ -212,6 +217,7 @@ export function slotFormats(title: string, metric: string) {
     [
       METRIC.battingAvgAway,
       METRIC.battingAvgInCountry,
+      METRIC.battingAvgVsCountryTest,
       METRIC.wicketsClosest300,
       METRIC.hundredsVsCountryTest,
       METRIC.hundredsInCountryTest,
@@ -223,7 +229,7 @@ export function slotFormats(title: string, metric: string) {
   ) {
     return ["test"];
   }
-  if (metric === METRIC.hundredsVsCountryOdi) return ["odi"];
+  if (metric === METRIC.battingAvgVsCountryOdi || metric === METRIC.hundredsVsCountryOdi) return ["odi"];
   if (questionHasFormatToken(title)) return ["odi", "t20", "test"];
   const named = formatNamedInTitle(title);
   if (named) return [named];
@@ -328,7 +334,14 @@ export function playerEraYear(player: Player, format: string) {
   return Number.isInteger(year) ? year : null;
 }
 
-function countryNumber(country: string, india: number | null, australia: number | null, england: number | null, southAfrica: number | null) {
+function countryNumber(
+  country: string,
+  india: number | null | undefined,
+  australia: number | null | undefined,
+  england: number | null | undefined,
+  southAfrica: number | null | undefined,
+  pakistan?: number | null,
+) {
   switch (country.trim().toLowerCase()) {
     case "india":
       return asFloat(india);
@@ -338,6 +351,8 @@ function countryNumber(country: string, india: number | null, australia: number 
       return asFloat(england);
     case "south africa":
       return asFloat(southAfrica);
+    case "pakistan":
+      return asFloat(pakistan);
     default:
       return null;
   }
@@ -386,12 +401,44 @@ export function playerStatValue(player: Player, format: string, country: string,
         player.batting_avg_in_england_test,
         player.batting_avg_in_south_africa_test,
       );
+    case METRIC.battingAvgVsCountryTest:
+      return countryNumber(
+        country,
+        player.batting_avg_vs_india_test,
+        player.batting_avg_vs_australia_test,
+        player.batting_avg_vs_england_test,
+        player.batting_avg_vs_south_africa_test,
+        player.batting_avg_vs_pakistan_test,
+      );
+    case METRIC.battingAvgVsCountryOdi:
+      return countryNumber(
+        country,
+        player.batting_avg_vs_india_odi,
+        player.batting_avg_vs_australia_odi,
+        player.batting_avg_vs_england_odi,
+        player.batting_avg_vs_south_africa_odi,
+        player.batting_avg_vs_pakistan_odi,
+      );
     case METRIC.hundredsVsCountryTest:
-      return countryNumber(country, player.hundreds_vs_india_test, player.hundreds_vs_australia_test, player.hundreds_vs_england_test, player.hundreds_vs_south_africa_test);
+      return countryNumber(
+        country,
+        player.hundreds_vs_india_test,
+        player.hundreds_vs_australia_test,
+        player.hundreds_vs_england_test,
+        player.hundreds_vs_south_africa_test,
+        player.hundreds_vs_pakistan_test,
+      );
     case METRIC.hundredsInCountryTest:
       return countryNumber(country, player.hundreds_in_india_test, player.hundreds_in_australia_test, player.hundreds_in_england_test, player.hundreds_in_south_africa_test);
     case METRIC.hundredsVsCountryOdi:
-      return countryNumber(country, player.hundreds_vs_india_odi, player.hundreds_vs_australia_odi, player.hundreds_vs_england_odi, player.hundreds_vs_south_africa_odi);
+      return countryNumber(
+        country,
+        player.hundreds_vs_india_odi,
+        player.hundreds_vs_australia_odi,
+        player.hundreds_vs_england_odi,
+        player.hundreds_vs_south_africa_odi,
+        player.hundreds_vs_pakistan_odi,
+      );
     case METRIC.ballsPlayedTest:
       return asFloat(player.balls_played_test);
     case METRIC.wicketsHomeTest:
