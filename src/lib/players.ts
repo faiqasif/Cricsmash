@@ -262,3 +262,13 @@ export function suggestPlayers(params: {
   query.set("limit", String(params.limit ?? 12));
   return api<{ items: PlayerListItem[] }>(`/api/v1/players/suggest?${query.toString()}`);
 }
+
+export async function listAllPlayers() {
+  const first = await api<PlayerListResponse>("/api/v1/players?page=1&page_size=100");
+  const items = [...first.items];
+  for (let page = 2; page <= first.total_pages; page += 1) {
+    const next = await api<PlayerListResponse>(`/api/v1/players?page=${page}&page_size=100`);
+    items.push(...next.items);
+  }
+  return items.sort((left, right) => left.name.localeCompare(right.name));
+}

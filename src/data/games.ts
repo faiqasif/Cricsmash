@@ -17,7 +17,8 @@ export const GAME_CARDS: GameCard[] = [
   {
     slug: "player-of-the-day",
     title: "Player of the day",
-    description: "Can you find the mystery player?",
+    description: "Select a player for each day.",
+    href: "/games/player-of-the-day",
     image: "/games/player-of-the-day.png",
   },
   {

@@ -28,6 +28,15 @@ export function errorResponse(err: unknown) {
   if (err instanceof Error && err.name === "TeamConflictError") {
     return fail(409, "conflict", err.message);
   }
+  if (err instanceof Error && err.name === "PlayerDayInputError") {
+    return fail(400, "invalid_input", err.message);
+  }
+  if (err instanceof Error && err.name === "PlayerDayNotFoundError") {
+    return fail(404, "not_found", err.message);
+  }
+  if (err instanceof Error && err.name === "PlayerDayConflictError") {
+    return fail(409, "conflict", err.message);
+  }
   if (err instanceof Error && err.name === "CatalogInputError") {
     return fail(400, "invalid_input", err.message);
   }
@@ -47,7 +56,7 @@ export function errorResponse(err: unknown) {
       return fail(
         403,
         "permission_denied",
-        "Firebase blocked this request. Sign in, and publish rules that allow signed-in access to players, categories, questions, teamsOfTheDay, and dailyQuizzes.",
+        "Firebase blocked this request. Sign in, and publish rules that allow signed-in access to players, categories, questions, teamsOfTheDay, playersOfTheDay, and dailyQuizzes.",
       );
     }
     return fail(502, "firebase_error", err.message);
