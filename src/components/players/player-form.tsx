@@ -257,11 +257,27 @@ export function PlayerForm({ player }: PlayerFormProps) {
         "odi_wc_hundreds",
         "odi_wc_fifties",
         "odi_wc_highest_score",
+        "odi_wc_final_batting_average",
+        "odi_wc_final_hundreds",
+        "odi_wc_final_fifties",
+        "odi_wc_final_highest_score",
+        "odi_wc_semi_batting_average",
+        "odi_wc_semi_hundreds",
+        "odi_wc_semi_fifties",
+        "odi_wc_semi_highest_score",
         "t20_wc_batting_average",
         "t20_wc_strike_rate",
         "t20_wc_hundreds",
         "t20_wc_fifties",
         "t20_wc_highest_score",
+        "t20_wc_final_batting_average",
+        "t20_wc_final_strike_rate",
+        "t20_wc_final_fifties",
+        "t20_wc_final_highest_score",
+        "t20_wc_semi_batting_average",
+        "t20_wc_semi_strike_rate",
+        "t20_wc_semi_fifties",
+        "t20_wc_semi_highest_score",
       ] as const) {
         void formik.setFieldValue(key, "");
       }
@@ -616,6 +632,14 @@ export function PlayerForm({ player }: PlayerFormProps) {
                 { name: "odi_wc_fifties", label: "No of 50s" },
                 { name: "odi_wc_player_of_match", label: "Player of the Match awards" },
                 { name: "odi_wc_highest_score", label: "Highest Score" },
+                { name: "odi_wc_final_batting_average", label: "Batting average in finals" },
+                { name: "odi_wc_final_hundreds", label: "No of 100s in finals" },
+                { name: "odi_wc_final_fifties", label: "No of 50s in finals" },
+                { name: "odi_wc_final_highest_score", label: "Highest score in finals" },
+                { name: "odi_wc_semi_batting_average", label: "Batting average in semifinals" },
+                { name: "odi_wc_semi_hundreds", label: "No of 100s in semifinals" },
+                { name: "odi_wc_semi_fifties", label: "No of 50s in semifinals" },
+                { name: "odi_wc_semi_highest_score", label: "Highest score in semifinals" },
               ]}
               values={formik.values}
               fieldError={fieldError}
@@ -631,6 +655,14 @@ export function PlayerForm({ player }: PlayerFormProps) {
                 { name: "t20_wc_fifties", label: "No of 50s" },
                 { name: "t20_wc_player_of_match", label: "Player of the Match awards" },
                 { name: "t20_wc_highest_score", label: "Highest Score" },
+                { name: "t20_wc_final_batting_average", label: "Batting average in finals" },
+                { name: "t20_wc_final_strike_rate", label: "Batting strike rate in finals" },
+                { name: "t20_wc_final_fifties", label: "No of 50s in finals" },
+                { name: "t20_wc_final_highest_score", label: "Highest score in finals" },
+                { name: "t20_wc_semi_batting_average", label: "Batting average in semifinals" },
+                { name: "t20_wc_semi_strike_rate", label: "Batting strike rate in semifinals" },
+                { name: "t20_wc_semi_fifties", label: "No of 50s in semifinals" },
+                { name: "t20_wc_semi_highest_score", label: "Highest score in semifinals" },
               ]}
               values={formik.values}
               fieldError={fieldError}

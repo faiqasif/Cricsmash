@@ -52,6 +52,22 @@ export const METRIC = {
   t20WcPlayerOfMatch: "t20_wc_player_of_match",
   t20WcWickets: "t20_wc_wickets",
   t20WcBowlingSr: "t20_wc_bowling_strike_rate",
+  odiWcFinalBattingAverage: "odi_wc_final_batting_average",
+  odiWcFinalHundreds: "odi_wc_final_hundreds",
+  odiWcFinalFifties: "odi_wc_final_fifties",
+  odiWcFinalHighestScore: "odi_wc_final_highest_score",
+  odiWcSemiBattingAverage: "odi_wc_semi_batting_average",
+  odiWcSemiHundreds: "odi_wc_semi_hundreds",
+  odiWcSemiFifties: "odi_wc_semi_fifties",
+  odiWcSemiHighestScore: "odi_wc_semi_highest_score",
+  t20WcFinalBattingAverage: "t20_wc_final_batting_average",
+  t20WcFinalStrikeRate: "t20_wc_final_strike_rate",
+  t20WcFinalFifties: "t20_wc_final_fifties",
+  t20WcFinalHighestScore: "t20_wc_final_highest_score",
+  t20WcSemiBattingAverage: "t20_wc_semi_batting_average",
+  t20WcSemiStrikeRate: "t20_wc_semi_strike_rate",
+  t20WcSemiFifties: "t20_wc_semi_fifties",
+  t20WcSemiHighestScore: "t20_wc_semi_highest_score",
   mostHundredsAgainst: "most_hundreds_against",
   battingPosition: "batting_position",
   mostDismissalsBowler: "most_dismissals_against_bowler",
@@ -169,6 +185,31 @@ function inferWorldCupMetric(text: string) {
   const odi = text.includes("odi world cup");
   const t20 = text.includes("t20 world cup");
   if (!odi && !t20) return "";
+  const semi = /semi[ -]?final/.test(text);
+  const final = !semi && text.includes("final");
+  if (semi || final) {
+    const stage = semi ? "semi" : "final";
+    if (text.includes("strike rate") && !text.includes("bowling")) {
+      if (!odi) return stage === "semi" ? METRIC.t20WcSemiStrikeRate : METRIC.t20WcFinalStrikeRate;
+      return "";
+    }
+    if (text.includes("hundred") || text.includes("centur") || text.includes("100")) {
+      if (odi) return stage === "semi" ? METRIC.odiWcSemiHundreds : METRIC.odiWcFinalHundreds;
+      return "";
+    }
+    if (text.includes("fift") || text.includes("50")) {
+      if (odi) return stage === "semi" ? METRIC.odiWcSemiFifties : METRIC.odiWcFinalFifties;
+      return stage === "semi" ? METRIC.t20WcSemiFifties : METRIC.t20WcFinalFifties;
+    }
+    if (text.includes("highest score") || text.includes("highest individual")) {
+      if (odi) return stage === "semi" ? METRIC.odiWcSemiHighestScore : METRIC.odiWcFinalHighestScore;
+      return stage === "semi" ? METRIC.t20WcSemiHighestScore : METRIC.t20WcFinalHighestScore;
+    }
+    if (text.includes("average") && !text.includes("bowling")) {
+      if (odi) return stage === "semi" ? METRIC.odiWcSemiBattingAverage : METRIC.odiWcFinalBattingAverage;
+      return stage === "semi" ? METRIC.t20WcSemiBattingAverage : METRIC.t20WcFinalBattingAverage;
+    }
+  }
   if (text.includes("bowling strike")) return odi ? METRIC.odiWcBowlingSr : METRIC.t20WcBowlingSr;
   if (text.includes("wicket")) return odi ? METRIC.odiWcWickets : METRIC.t20WcWickets;
   if (text.includes("player of the match") || text.includes("man of the match")) return odi ? METRIC.odiWcPlayerOfMatch : METRIC.t20WcPlayerOfMatch;
@@ -459,6 +500,22 @@ export function playerStatValue(player: Player, format: string, country: string,
       return asFloat(player.odi_wc_fifties);
     case METRIC.odiWcHighestScore:
       return asFloat(player.odi_wc_highest_score);
+    case METRIC.odiWcFinalBattingAverage:
+      return asFloat(player.odi_wc_final_batting_average);
+    case METRIC.odiWcFinalHundreds:
+      return asFloat(player.odi_wc_final_hundreds);
+    case METRIC.odiWcFinalFifties:
+      return asFloat(player.odi_wc_final_fifties);
+    case METRIC.odiWcFinalHighestScore:
+      return asFloat(player.odi_wc_final_highest_score);
+    case METRIC.odiWcSemiBattingAverage:
+      return asFloat(player.odi_wc_semi_batting_average);
+    case METRIC.odiWcSemiHundreds:
+      return asFloat(player.odi_wc_semi_hundreds);
+    case METRIC.odiWcSemiFifties:
+      return asFloat(player.odi_wc_semi_fifties);
+    case METRIC.odiWcSemiHighestScore:
+      return asFloat(player.odi_wc_semi_highest_score);
     case METRIC.odiWcPlayerOfMatch:
       return asFloat(player.odi_wc_player_of_match);
     case METRIC.odiWcWickets:
@@ -475,6 +532,22 @@ export function playerStatValue(player: Player, format: string, country: string,
       return asFloat(player.t20_wc_fifties);
     case METRIC.t20WcHighestScore:
       return asFloat(player.t20_wc_highest_score);
+    case METRIC.t20WcFinalBattingAverage:
+      return asFloat(player.t20_wc_final_batting_average);
+    case METRIC.t20WcFinalStrikeRate:
+      return asFloat(player.t20_wc_final_strike_rate);
+    case METRIC.t20WcFinalFifties:
+      return asFloat(player.t20_wc_final_fifties);
+    case METRIC.t20WcFinalHighestScore:
+      return asFloat(player.t20_wc_final_highest_score);
+    case METRIC.t20WcSemiBattingAverage:
+      return asFloat(player.t20_wc_semi_batting_average);
+    case METRIC.t20WcSemiStrikeRate:
+      return asFloat(player.t20_wc_semi_strike_rate);
+    case METRIC.t20WcSemiFifties:
+      return asFloat(player.t20_wc_semi_fifties);
+    case METRIC.t20WcSemiHighestScore:
+      return asFloat(player.t20_wc_semi_highest_score);
     case METRIC.t20WcPlayerOfMatch:
       return asFloat(player.t20_wc_player_of_match);
     case METRIC.t20WcWickets:
@@ -685,11 +758,17 @@ export function formatOptionStat(metric: string, value: number | null) {
     case METRIC.hundredsInCountryTest:
     case METRIC.hundredsVsCountryOdi:
     case METRIC.odiWcHundreds:
+    case METRIC.odiWcFinalHundreds:
+    case METRIC.odiWcSemiHundreds:
     case METRIC.t20WcHundreds:
       return `${rounded} centuries`;
     case METRIC.fifties:
     case METRIC.odiWcFifties:
+    case METRIC.odiWcFinalFifties:
+    case METRIC.odiWcSemiFifties:
     case METRIC.t20WcFifties:
+    case METRIC.t20WcFinalFifties:
+    case METRIC.t20WcSemiFifties:
       return `${rounded} fifties`;
     case METRIC.sixes:
       return `${rounded} sixes`;

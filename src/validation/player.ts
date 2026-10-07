@@ -62,6 +62,14 @@ export type PlayerFormValues = {
   odi_wc_fifties: string;
   odi_wc_player_of_match: string;
   odi_wc_highest_score: string;
+  odi_wc_final_batting_average: string;
+  odi_wc_final_hundreds: string;
+  odi_wc_final_fifties: string;
+  odi_wc_final_highest_score: string;
+  odi_wc_semi_batting_average: string;
+  odi_wc_semi_hundreds: string;
+  odi_wc_semi_fifties: string;
+  odi_wc_semi_highest_score: string;
   odi_wc_wickets: string;
   odi_wc_bowling_strike_rate: string;
   t20_wc_batting_average: string;
@@ -70,6 +78,14 @@ export type PlayerFormValues = {
   t20_wc_fifties: string;
   t20_wc_player_of_match: string;
   t20_wc_highest_score: string;
+  t20_wc_final_batting_average: string;
+  t20_wc_final_strike_rate: string;
+  t20_wc_final_fifties: string;
+  t20_wc_final_highest_score: string;
+  t20_wc_semi_batting_average: string;
+  t20_wc_semi_strike_rate: string;
+  t20_wc_semi_fifties: string;
+  t20_wc_semi_highest_score: string;
   t20_wc_wickets: string;
   t20_wc_bowling_strike_rate: string;
   status: "active" | "inactive";
@@ -176,16 +192,32 @@ const BATTING_EXTRA_INT_KEYS = [
   "odi_wc_hundreds",
   "odi_wc_fifties",
   "odi_wc_highest_score",
+  "odi_wc_final_hundreds",
+  "odi_wc_final_fifties",
+  "odi_wc_final_highest_score",
+  "odi_wc_semi_hundreds",
+  "odi_wc_semi_fifties",
+  "odi_wc_semi_highest_score",
   "t20_wc_hundreds",
   "t20_wc_fifties",
   "t20_wc_highest_score",
+  "t20_wc_final_fifties",
+  "t20_wc_final_highest_score",
+  "t20_wc_semi_fifties",
+  "t20_wc_semi_highest_score",
 ] as const;
 
 const BATTING_EXTRA_FLOAT_KEYS = [
   "odi_wc_batting_average",
   "odi_wc_strike_rate",
+  "odi_wc_final_batting_average",
+  "odi_wc_semi_batting_average",
   "t20_wc_batting_average",
   "t20_wc_strike_rate",
+  "t20_wc_final_batting_average",
+  "t20_wc_final_strike_rate",
+  "t20_wc_semi_batting_average",
+  "t20_wc_semi_strike_rate",
 ] as const;
 
 const BOWLING_WC_INT_KEYS = ["odi_wc_wickets", "t20_wc_wickets"] as const;
@@ -291,6 +323,14 @@ export function playerInitialValues(player?: Player): PlayerFormValues {
     odi_wc_fifties: numToForm(player?.odi_wc_fifties),
     odi_wc_player_of_match: numToForm(player?.odi_wc_player_of_match),
     odi_wc_highest_score: numToForm(player?.odi_wc_highest_score),
+    odi_wc_final_batting_average: numToForm(player?.odi_wc_final_batting_average),
+    odi_wc_final_hundreds: numToForm(player?.odi_wc_final_hundreds),
+    odi_wc_final_fifties: numToForm(player?.odi_wc_final_fifties),
+    odi_wc_final_highest_score: numToForm(player?.odi_wc_final_highest_score),
+    odi_wc_semi_batting_average: numToForm(player?.odi_wc_semi_batting_average),
+    odi_wc_semi_hundreds: numToForm(player?.odi_wc_semi_hundreds),
+    odi_wc_semi_fifties: numToForm(player?.odi_wc_semi_fifties),
+    odi_wc_semi_highest_score: numToForm(player?.odi_wc_semi_highest_score),
     odi_wc_wickets: numToForm(player?.odi_wc_wickets),
     odi_wc_bowling_strike_rate: numToForm(player?.odi_wc_bowling_strike_rate),
     t20_wc_batting_average: numToForm(player?.t20_wc_batting_average),
@@ -299,6 +339,14 @@ export function playerInitialValues(player?: Player): PlayerFormValues {
     t20_wc_fifties: numToForm(player?.t20_wc_fifties),
     t20_wc_player_of_match: numToForm(player?.t20_wc_player_of_match),
     t20_wc_highest_score: numToForm(player?.t20_wc_highest_score),
+    t20_wc_final_batting_average: numToForm(player?.t20_wc_final_batting_average),
+    t20_wc_final_strike_rate: numToForm(player?.t20_wc_final_strike_rate),
+    t20_wc_final_fifties: numToForm(player?.t20_wc_final_fifties),
+    t20_wc_final_highest_score: numToForm(player?.t20_wc_final_highest_score),
+    t20_wc_semi_batting_average: numToForm(player?.t20_wc_semi_batting_average),
+    t20_wc_semi_strike_rate: numToForm(player?.t20_wc_semi_strike_rate),
+    t20_wc_semi_fifties: numToForm(player?.t20_wc_semi_fifties),
+    t20_wc_semi_highest_score: numToForm(player?.t20_wc_semi_highest_score),
     t20_wc_wickets: numToForm(player?.t20_wc_wickets),
     t20_wc_bowling_strike_rate: numToForm(player?.t20_wc_bowling_strike_rate),
     status: player?.status ?? "active",
@@ -480,6 +528,14 @@ export const playerSchema = Yup.object({
   odi_wc_fifties: optionalWholeNumber("Enter a valid fifties count"),
   odi_wc_player_of_match: optionalWholeNumber("Enter a valid awards count"),
   odi_wc_highest_score: optionalWholeNumber("Enter a valid highest score"),
+  odi_wc_final_batting_average: optionalDecimal("Enter a valid batting average"),
+  odi_wc_final_hundreds: optionalWholeNumber("Enter a valid hundreds count"),
+  odi_wc_final_fifties: optionalWholeNumber("Enter a valid fifties count"),
+  odi_wc_final_highest_score: optionalWholeNumber("Enter a valid highest score"),
+  odi_wc_semi_batting_average: optionalDecimal("Enter a valid batting average"),
+  odi_wc_semi_hundreds: optionalWholeNumber("Enter a valid hundreds count"),
+  odi_wc_semi_fifties: optionalWholeNumber("Enter a valid fifties count"),
+  odi_wc_semi_highest_score: optionalWholeNumber("Enter a valid highest score"),
   odi_wc_wickets: optionalWholeNumber("Enter a valid wicket count"),
   odi_wc_bowling_strike_rate: optionalDecimal("Enter a valid bowling strike rate"),
   t20_wc_batting_average: optionalDecimal("Enter a valid batting average"),
@@ -488,6 +544,14 @@ export const playerSchema = Yup.object({
   t20_wc_fifties: optionalWholeNumber("Enter a valid fifties count"),
   t20_wc_player_of_match: optionalWholeNumber("Enter a valid awards count"),
   t20_wc_highest_score: optionalWholeNumber("Enter a valid highest score"),
+  t20_wc_final_batting_average: optionalDecimal("Enter a valid batting average"),
+  t20_wc_final_strike_rate: optionalDecimal("Enter a valid strike rate", 0, 1000),
+  t20_wc_final_fifties: optionalWholeNumber("Enter a valid fifties count"),
+  t20_wc_final_highest_score: optionalWholeNumber("Enter a valid highest score"),
+  t20_wc_semi_batting_average: optionalDecimal("Enter a valid batting average"),
+  t20_wc_semi_strike_rate: optionalDecimal("Enter a valid strike rate", 0, 1000),
+  t20_wc_semi_fifties: optionalWholeNumber("Enter a valid fifties count"),
+  t20_wc_semi_highest_score: optionalWholeNumber("Enter a valid highest score"),
   t20_wc_wickets: optionalWholeNumber("Enter a valid wicket count"),
   t20_wc_bowling_strike_rate: optionalDecimal("Enter a valid bowling strike rate"),
   status: Yup.string().oneOf(["active", "inactive"], "Select a status").required("Select a status"),

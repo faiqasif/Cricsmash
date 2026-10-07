@@ -119,7 +119,11 @@ function statSpanLimit(metric: string, minValue: number) {
       METRIC.battingAvgVsCountryOdi,
       METRIC.battingAvgHomeTest,
       METRIC.odiWcBattingAverage,
+      METRIC.odiWcFinalBattingAverage,
+      METRIC.odiWcSemiBattingAverage,
       METRIC.t20WcBattingAverage,
+      METRIC.t20WcFinalBattingAverage,
+      METRIC.t20WcSemiBattingAverage,
     ].some((value) => value === metric)
   ) {
     return 6;
@@ -132,6 +136,8 @@ function statSpanLimit(metric: string, minValue: number) {
       METRIC.battingSrMin,
       METRIC.odiWcStrikeRate,
       METRIC.t20WcStrikeRate,
+      METRIC.t20WcFinalStrikeRate,
+      METRIC.t20WcSemiStrikeRate,
       METRIC.odiWcBowlingSr,
       METRIC.t20WcBowlingSr,
     ].some((value) => value === metric)
