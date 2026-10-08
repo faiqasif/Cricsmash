@@ -7,7 +7,14 @@ import { ErrorText } from "@/components/form/error-text";
 import { TeamCalendar } from "@/components/games/team-calendar";
 import { ApiError } from "@/lib/api";
 import { listAllPlayers, type PlayerListItem } from "@/lib/players";
-import { createPlayersOfTheDay, updatePlayerOfTheDay, type PlayerOfTheDay } from "@/lib/player-of-the-day";
+import { FORMAT_LABELS, FORMATS } from "@/data/cricket";
+import {
+  createPlayersOfTheDay,
+  PLAYER_DAY_STATS,
+  updatePlayerOfTheDay,
+  type PlayerDayFormat,
+  type PlayerOfTheDay,
+} from "@/lib/player-of-the-day";
 
 const inputClass =
   "h-12 w-full appearance-none rounded-full border border-white/8 bg-[#0c0c10] px-5 text-sm text-white outline-none focus:border-purple/50 [color-scheme:dark]";
@@ -22,6 +29,12 @@ export function PlayerOfTheDayForm({ entry }: PlayerOfTheDayFormProps) {
   const editing = Boolean(entry);
   const [players, setPlayers] = useState<PlayerListItem[]>([]);
   const [playerId, setPlayerId] = useState(entry?.player_id ?? "");
+  const [formats, setFormats] = useState<Record<(typeof PLAYER_DAY_STATS)[number]["key"], PlayerDayFormat>>({
+    debut_format: entry?.debut_format ?? "odi",
+    wickets_format: entry?.wickets_format ?? "odi",
+    matches_format: entry?.matches_format ?? "odi",
+    hundreds_format: entry?.hundreds_format ?? "odi",
+  });
   const [dates, setDates] = useState<string[]>(entry?.play_date ? [entry.play_date] : []);
   const [loadingPlayers, setLoadingPlayers] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -68,9 +81,9 @@ export function PlayerOfTheDayForm({ entry }: PlayerOfTheDayFormProps) {
     setError("");
     try {
       if (editing && entry) {
-        await updatePlayerOfTheDay(entry.id, { player_id: playerId, dates });
+        await updatePlayerOfTheDay(entry.id, { player_id: playerId, dates, ...formats });
       } else {
-        await createPlayersOfTheDay({ player_id: playerId, dates });
+        await createPlayersOfTheDay({ player_id: playerId, dates, ...formats });
       }
       router.push("/games/player-of-the-day");
       router.refresh();
@@ -137,6 +150,36 @@ export function PlayerOfTheDayForm({ entry }: PlayerOfTheDayFormProps) {
               <Shuffle className="size-4" />
               Generate Random
             </button>
+          </div>
+        </div>
+
+        <div>
+          <p className={labelClass}>Compare these stats in</p>
+          <div className="grid gap-4 sm:grid-cols-2">
+            {PLAYER_DAY_STATS.map((stat) => (
+              <div key={stat.key}>
+                <label className="mb-2 block text-xs font-medium text-zinc-400" htmlFor={stat.key}>
+                  {stat.label}
+                </label>
+                <div className="relative">
+                  <select
+                    id={stat.key}
+                    value={formats[stat.key]}
+                    onChange={(event) =>
+                      setFormats((current) => ({ ...current, [stat.key]: event.target.value as PlayerDayFormat }))
+                    }
+                    className={inputClass}
+                  >
+                    {FORMATS.map((format) => (
+                      <option key={format} value={format}>
+                        {FORMAT_LABELS[format]}
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown className="pointer-events-none absolute right-4 top-1/2 size-4 -translate-y-1/2 text-zinc-500" />
+                </div>
+              </div>
+            ))}
           </div>
         </div>
 

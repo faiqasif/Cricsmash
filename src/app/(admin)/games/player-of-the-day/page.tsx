@@ -6,12 +6,13 @@ import { ChevronDown, ChevronLeft, ChevronRight, Menu, Pencil, Plus, Search, Tra
 import { HeaderActions } from "@/components/layout/header-actions";
 import { useOpenMenu } from "@/components/layout/admin-shell";
 import { ConfirmDeleteModal, openConfirm } from "@/components/ui/confirm-delete-modal";
-import { flagUrl } from "@/data/cricket";
+import { flagUrl, FORMAT_LABELS } from "@/data/cricket";
 import { ApiError } from "@/lib/api";
 import {
   deletePlayerOfTheDay,
   formatPlayDate,
   listPlayersOfTheDay,
+  PLAYER_DAY_STATS,
   updatePlayerOfTheDayStatus,
   type PlayerOfTheDay,
   type PlayerOfTheDayStatus,
@@ -207,6 +208,7 @@ export default function PlayerOfTheDayListPage() {
               <th className="px-6 py-4 font-medium">Date</th>
               <th className="px-6 py-4 font-medium">Player Name</th>
               <th className="px-6 py-4 font-medium">Country</th>
+              <th className="px-6 py-4 font-medium">Formats</th>
               <th className="px-6 py-4 font-medium">No of times played</th>
               <th className="px-6 py-4 font-medium">Status</th>
               <th className="px-6 py-4 font-medium" />
@@ -215,13 +217,13 @@ export default function PlayerOfTheDayListPage() {
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={7} className="px-6 py-10 text-center text-zinc-500">
+                <td colSpan={8} className="px-6 py-10 text-center text-zinc-500">
                   Loading players…
                 </td>
               </tr>
             ) : empty ? (
               <tr>
-                <td colSpan={7} className="px-6 py-10 text-center text-zinc-500">
+                <td colSpan={8} className="px-6 py-10 text-center text-zinc-500">
                   No players of the day yet. Pick one for today or a future date.
                 </td>
               </tr>
@@ -252,6 +254,9 @@ export default function PlayerOfTheDayListPage() {
                         <img src={flagUrl(item.country)} alt="" className="h-3.5 w-5 rounded-sm object-cover" />
                         {item.country}
                       </div>
+                    </td>
+                    <td className="px-6 py-4 text-xs text-zinc-300">
+                      {PLAYER_DAY_STATS.map((stat) => `${stat.label} ${FORMAT_LABELS[item[stat.key]]}`).join(" · ")}
                     </td>
                     <td className="px-6 py-4 text-zinc-300">{item.times_played}</td>
                     <td className="px-6 py-4">

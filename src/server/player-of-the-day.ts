@@ -1,10 +1,11 @@
 import { deleteDocument, getDocument, listDocuments, setDocument } from "@/lib/firebase";
-import type { PlayerOfTheDay, PlayerOfTheDayListResponse, PlayerOfTheDayStatus } from "@/lib/player-of-the-day";
+import type { PlayerDayFormat, PlayerOfTheDay, PlayerOfTheDayListResponse, PlayerOfTheDayStatus } from "@/lib/player-of-the-day";
 import { getPlayer } from "@/server/players";
 
 const COLLECTION = "playersOfTheDay";
 const STATUSES = ["pending", "active", "past"] as const;
 const ROLES = ["batsman", "bowler", "all-rounder", "wicketkeeper"] as const;
+const FORMATS = ["odi", "t20", "test"] as const;
 
 export class PlayerDayInputError extends Error {
   constructor(message: string) {
@@ -34,6 +35,10 @@ type StoredDay = {
   country: string;
   photo_url: string | null;
   role: string;
+  debut_format: PlayerDayFormat;
+  wickets_format: PlayerDayFormat;
+  matches_format: PlayerDayFormat;
+  hundreds_format: PlayerDayFormat;
   status: PlayerOfTheDayStatus;
   times_played: number;
   created_at: string;
@@ -81,6 +86,16 @@ function uniqueDates(values: string[], allowPast: boolean) {
   return dates;
 }
 
+function readFormat(value: unknown): PlayerDayFormat {
+  return FORMATS.includes(value as PlayerDayFormat) ? (value as PlayerDayFormat) : "odi";
+}
+
+function requireFormat(value: unknown, label: string): PlayerDayFormat {
+  const text = typeof value === "string" ? value.trim().toLowerCase() : "";
+  if (FORMATS.includes(text as PlayerDayFormat)) return text as PlayerDayFormat;
+  throw new PlayerDayInputError(`${label} format must be ODI, T20, or Test`);
+}
+
 function readDay(id: string, data: Record<string, unknown>): StoredDay & { id: string } {
   const role = ROLES.includes(data.role as (typeof ROLES)[number]) ? (data.role as (typeof ROLES)[number]) : "batsman";
   const status = STATUSES.includes(data.status as PlayerOfTheDayStatus) ? (data.status as PlayerOfTheDayStatus) : "pending";
@@ -92,6 +107,10 @@ function readDay(id: string, data: Record<string, unknown>): StoredDay & { id: s
     country: typeof data.country === "string" ? data.country : "",
     photo_url: typeof data.photo_url === "string" ? data.photo_url : null,
     role,
+    debut_format: readFormat(data.debut_format),
+    wickets_format: readFormat(data.wickets_format),
+    matches_format: readFormat(data.matches_format),
+    hundreds_format: readFormat(data.hundreds_format),
     status,
     times_played: typeof data.times_played === "number" ? data.times_played : 0,
     created_at: typeof data.created_at === "string" ? data.created_at : "",
@@ -108,6 +127,10 @@ function toResponse(day: StoredDay & { id: string }): PlayerOfTheDay {
     country: day.country,
     photo_url: day.photo_url,
     role: day.role,
+    debut_format: day.debut_format,
+    wickets_format: day.wickets_format,
+    matches_format: day.matches_format,
+    hundreds_format: day.hundreds_format,
     status: day.status,
     times_played: day.times_played,
     created_at: day.created_at,
@@ -127,6 +150,10 @@ function storedFields(day: StoredDay & { id?: string }): StoredDay {
     country: day.country,
     photo_url: day.photo_url,
     role: day.role,
+    debut_format: day.debut_format,
+    wickets_format: day.wickets_format,
+    matches_format: day.matches_format,
+    hundreds_format: day.hundreds_format,
     status: day.status,
     times_played: day.times_played,
     created_at: day.created_at,
@@ -171,7 +198,14 @@ export function parsePlayerDayPayload(value: unknown, editing: boolean) {
       : [];
   const dates = uniqueDates(rawDates, editing);
   if (editing && dates.length !== 1) throw new PlayerDayInputError("Choose exactly one date when editing");
-  return { playerId, dates };
+  return {
+    playerId,
+    dates,
+    debut_format: requireFormat(body.debut_format, "Debut"),
+    wickets_format: requireFormat(body.wickets_format, "Wickets"),
+    matches_format: requireFormat(body.matches_format, "Matches"),
+    hundreds_format: requireFormat(body.hundreds_format, "Hundreds"),
+  };
 }
 
 export async function listPlayerDays(input: {
@@ -235,6 +269,10 @@ export async function createPlayerDays(value: unknown) {
     const stored: StoredDay = {
       play_date: day,
       ...player,
+      debut_format: input.debut_format,
+      wickets_format: input.wickets_format,
+      matches_format: input.matches_format,
+      hundreds_format: input.hundreds_format,
       status: defaultStatus(day),
       times_played: 0,
       created_at: now,
@@ -259,6 +297,10 @@ export async function updatePlayerDay(id: string, value: unknown) {
     ...existing,
     play_date: day,
     ...player,
+    debut_format: input.debut_format,
+    wickets_format: input.wickets_format,
+    matches_format: input.matches_format,
+    hundreds_format: input.hundreds_format,
     status: defaultStatus(day),
     updated_at: new Date().toISOString(),
   };

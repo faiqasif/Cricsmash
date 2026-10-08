@@ -2,6 +2,14 @@ import { api } from "@/lib/api";
 import { formatQuizDate } from "@/lib/daily-quiz";
 
 export type PlayerOfTheDayStatus = "pending" | "active" | "past";
+export type PlayerDayFormat = "odi" | "t20" | "test";
+
+export const PLAYER_DAY_STATS = [
+  { key: "debut_format", label: "Debut" },
+  { key: "wickets_format", label: "Wickets" },
+  { key: "matches_format", label: "Matches" },
+  { key: "hundreds_format", label: "Hundreds" },
+] as const;
 
 export type PlayerOfTheDay = {
   id: string;
@@ -11,6 +19,10 @@ export type PlayerOfTheDay = {
   country: string;
   photo_url: string | null;
   role: string;
+  debut_format: PlayerDayFormat;
+  wickets_format: PlayerDayFormat;
+  matches_format: PlayerDayFormat;
+  hundreds_format: PlayerDayFormat;
   status: PlayerOfTheDayStatus;
   times_played: number;
   created_at?: string;
@@ -28,6 +40,10 @@ export type PlayerOfTheDayPayload = {
   player_id: string;
   dates?: string[];
   play_date?: string;
+  debut_format: PlayerDayFormat;
+  wickets_format: PlayerDayFormat;
+  matches_format: PlayerDayFormat;
+  hundreds_format: PlayerDayFormat;
 };
 
 export function listPlayersOfTheDay(params: {

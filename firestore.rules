@@ -31,6 +31,7 @@ rules_version = '2';
 //   - player_id: string (required)
 //   - name, country, role: copied from the player so the app can read one document
 //   - photo_url: string or null
+//   - debut_format, wickets_format, matches_format, hundreds_format: odi | t20 | test
 //   - status: string (required, pending | active | past)
 //   - times_played: number (required)
 //   - created_at: string (required, immutable)
@@ -113,11 +114,15 @@ service cloud.firestore {
         && isString(data.country, 1, 80)
         && (data.photo_url == null || isString(data.photo_url, 0, 4000))
         && data.role in ['batsman', 'bowler', 'all-rounder', 'wicketkeeper']
+        && data.debut_format in ['odi', 't20', 'test']
+        && data.wickets_format in ['odi', 't20', 'test']
+        && data.matches_format in ['odi', 't20', 'test']
+        && data.hundreds_format in ['odi', 't20', 'test']
         && data.status in ['pending', 'active', 'past']
         && data.times_played is int
         && data.created_at is string
         && data.updated_at is string
-        && data.keys().size() <= 12;
+        && data.keys().size() <= 16;
     }
 
     function isValidTeam(data) {
