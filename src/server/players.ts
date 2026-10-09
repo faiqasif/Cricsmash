@@ -9,6 +9,22 @@ import type {
   PlayerListResponse,
   PlayerPayload,
 } from "@/lib/players";
+import {
+  BATTING_EXTRA_FLOAT_KEYS,
+  BATTING_EXTRA_INT_KEYS,
+  BATTING_KEYS,
+  BATTING_TEST_KEYS,
+  BOWLING_KEYS,
+  BOWLING_TEST_KEYS,
+  BOWLING_WC_FLOAT_KEYS,
+  BOWLING_WC_INT_KEYS,
+  KEEPING_KEYS,
+  showsBatting,
+  showsBowling,
+  showsHundreds,
+  showsKeeping,
+  showsWickets,
+} from "@/validation/player";
 
 const PLAYERS = "players";
 const FIELDS = "playerFields";
@@ -313,16 +329,67 @@ function readPlayer(id: string, data: Record<string, unknown>): Player {
   };
 }
 
+const SHARED_FORMAT_KEYS: (keyof FormatStats)[] = [
+  "debut_year",
+  "debut_team",
+  "last_match_year",
+  "last_match_team",
+  "matches",
+  "man_of_the_match",
+];
+
+function formatForRole(stats: FormatStats | null | undefined, role: string) {
+  const source = stats ?? emptyFormat();
+  const out: Record<string, string | number | null> = {};
+  const keep = (key: keyof FormatStats) => {
+    out[key] = source[key] ?? null;
+  };
+  for (const key of SHARED_FORMAT_KEYS) keep(key);
+  if (showsBatting(role)) {
+    for (const key of BATTING_KEYS) {
+      if (key !== "hundreds") keep(key);
+    }
+  }
+  if (showsHundreds(role)) keep("hundreds");
+  if (showsBowling(role)) {
+    for (const key of BOWLING_KEYS) {
+      if (key !== "wickets") keep(key);
+    }
+  }
+  if (showsWickets(role)) keep("wickets");
+  if (showsKeeping(role)) {
+    for (const key of KEEPING_KEYS) keep(key);
+  }
+  return out;
+}
+
 function toStored(payload: PlayerPayload, createdAt: string, updatedAt: string) {
-  return {
+  const role = payload.role;
+  const data: Record<string, unknown> = {
     ...payload,
     custom_fields: payload.custom_fields ?? [],
-    odi: payload.odi ?? emptyFormat(),
-    t20: payload.t20 ?? emptyFormat(),
-    test: payload.test ?? emptyFormat(),
+    odi: formatForRole(payload.odi, role),
+    t20: formatForRole(payload.t20, role),
+    test: formatForRole(payload.test, role),
     created_at: createdAt,
     updated_at: updatedAt,
   };
+  const drop: string[] = [];
+  if (!showsBatting(role)) {
+    drop.push(
+      "most_dismissals_against_bowler",
+      "most_dismissals_against_bowler_count",
+      ...BATTING_TEST_KEYS,
+      ...BATTING_EXTRA_INT_KEYS,
+      ...BATTING_EXTRA_FLOAT_KEYS,
+    );
+  }
+  if (!showsBowling(role)) {
+    drop.push("most_dismissed_batter", ...BOWLING_TEST_KEYS, ...BOWLING_WC_INT_KEYS, ...BOWLING_WC_FLOAT_KEYS);
+  }
+  if (!showsKeeping(role)) drop.push("catches");
+  for (const key of drop) delete data[key];
+  return data;
 }
 
 function earliestDebut(player: Player) {

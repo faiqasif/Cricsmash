@@ -118,7 +118,7 @@ export function showsWickets(role: string) {
   return showsBowling(role) || role.trim().toLowerCase() === "batsman";
 }
 
-const BATTING_KEYS: (keyof FormatStats)[] = [
+export const BATTING_KEYS: (keyof FormatStats)[] = [
   "runs",
   "most_hundreds_against",
   "batting_average",
@@ -130,7 +130,7 @@ const BATTING_KEYS: (keyof FormatStats)[] = [
   "batting_position",
 ];
 
-const BOWLING_KEYS: (keyof FormatStats)[] = [
+export const BOWLING_KEYS: (keyof FormatStats)[] = [
   "wickets",
   "bowling_average",
   "bowling_strike_rate",
@@ -139,9 +139,9 @@ const BOWLING_KEYS: (keyof FormatStats)[] = [
   "best_bowling_figures",
 ];
 
-const KEEPING_KEYS: (keyof FormatStats)[] = ["catches", "stumpings"];
+export const KEEPING_KEYS: (keyof FormatStats)[] = ["catches", "stumpings"];
 
-const BATTING_TEST_KEYS = [
+export const BATTING_TEST_KEYS = [
   "batting_avg_home_test",
   "batting_avg_away_test",
   "batting_avg_in_india_test",
@@ -160,7 +160,7 @@ const BATTING_TEST_KEYS = [
   "batting_avg_vs_south_africa_odi",
 ] as const;
 
-const BOWLING_TEST_KEYS = [
+export const BOWLING_TEST_KEYS = [
   "wickets_home_test",
   "wickets_away_test",
   "wickets_vs_india",
@@ -173,7 +173,7 @@ const BOWLING_TEST_KEYS = [
   "wickets_in_south_africa",
 ] as const;
 
-const BATTING_EXTRA_INT_KEYS = [
+export const BATTING_EXTRA_INT_KEYS = [
   "hundreds_vs_pakistan_test",
   "hundreds_vs_india_test",
   "hundreds_vs_australia_test",
@@ -207,7 +207,7 @@ const BATTING_EXTRA_INT_KEYS = [
   "t20_wc_semi_highest_score",
 ] as const;
 
-const BATTING_EXTRA_FLOAT_KEYS = [
+export const BATTING_EXTRA_FLOAT_KEYS = [
   "odi_wc_batting_average",
   "odi_wc_strike_rate",
   "odi_wc_final_batting_average",
@@ -220,8 +220,8 @@ const BATTING_EXTRA_FLOAT_KEYS = [
   "t20_wc_semi_strike_rate",
 ] as const;
 
-const BOWLING_WC_INT_KEYS = ["odi_wc_wickets", "t20_wc_wickets"] as const;
-const BOWLING_WC_FLOAT_KEYS = ["odi_wc_bowling_strike_rate", "t20_wc_bowling_strike_rate"] as const;
+export const BOWLING_WC_INT_KEYS = ["odi_wc_wickets", "t20_wc_wickets"] as const;
+export const BOWLING_WC_FLOAT_KEYS = ["odi_wc_bowling_strike_rate", "t20_wc_bowling_strike_rate"] as const;
 const WC_SHARED_INT_KEYS = ["odi_wc_player_of_match", "t20_wc_player_of_match"] as const;
 
 export const emptyFormat = (): FormFormat => ({
