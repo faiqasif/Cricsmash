@@ -244,8 +244,8 @@ service cloud.firestore {
 
     match /playerChanges/{changeId} {
       allow get, list: if isSignedIn();
-      allow create: if isSignedIn() && isValidPlayerChange(request.resource.data);
-      allow update, delete: if false;
+      allow create, update: if isSignedIn() && isValidPlayerChange(request.resource.data);
+      allow delete: if false;
     }
 
     match /playersOfTheDay/{dayId} {
