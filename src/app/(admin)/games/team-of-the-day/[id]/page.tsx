@@ -144,16 +144,12 @@ export default function TeamOfTheDayDetailPage() {
 
           <h2 className="mt-6 text-lg font-semibold text-white">All Players({players.length})</h2>
           <div className="mt-4 space-y-3 rounded-[28px] bg-[#14141a] px-5 py-5 sm:px-7">
-            {players.map((player) => (
-              <div key={player.player_id} className="flex items-center gap-3 py-1">
-                {player.photo_url ? (
-                  <img src={player.photo_url} alt="" className="size-10 rounded-full object-cover" />
-                ) : (
-                  <span className="flex size-10 items-center justify-center rounded-full bg-purple-soft text-xs font-semibold text-purple">
-                    {initials(player.name)}
-                  </span>
-                )}
-                <p className="text-sm font-medium text-white">{player.name}</p>
+            {players.map((name, index) => (
+              <div key={`${name}-${index}`} className="flex items-center gap-3 py-1">
+                <span className="flex size-10 items-center justify-center rounded-full bg-purple-soft text-xs font-semibold text-purple">
+                  {initials(name)}
+                </span>
+                <p className="text-sm font-medium text-white">{name}</p>
               </div>
             ))}
           </div>

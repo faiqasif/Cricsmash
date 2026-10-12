@@ -1,5 +1,5 @@
 import { deleteDocument, getDocument, listDocuments, queryDocuments, setDocument } from "@/lib/firebase";
-import type { TeamOfTheDay, TeamOfTheDayListResponse, TeamOfTheDayPlayer, TeamOfTheDayStatus, TeamOfTheDayType } from "@/lib/team-of-the-day";
+import type { TeamOfTheDay, TeamOfTheDayListResponse, TeamOfTheDayStatus, TeamOfTheDayType } from "@/lib/team-of-the-day";
 import { getPlayer } from "@/server/players";
 
 const COLLECTION = "teamsOfTheDay";
@@ -28,15 +28,6 @@ export class TeamConflictError extends Error {
   }
 }
 
-type StoredPlayer = {
-  player_id: string;
-  name: string;
-  country: string;
-  photo_url: string | null;
-  role: string;
-  sort_order: number;
-};
-
 type StoredTeam = {
   play_date: string;
   title: string;
@@ -44,7 +35,7 @@ type StoredTeam = {
   team_type: TeamOfTheDayType;
   status: TeamOfTheDayStatus;
   times_played: number;
-  players: StoredPlayer[];
+  players: string[];
   created_at: string;
   updated_at: string;
 };
@@ -105,49 +96,44 @@ async function prepareRoster(title: string, teamType: string, playerIds: string[
     if (seen.has(id)) throw new TeamInputError("Players must be unique");
     seen.add(id);
   }
-  const players: StoredPlayer[] = [];
+  const players: string[] = [];
   let country = "";
-  for (let index = 0; index < playerIds.length; index += 1) {
+  for (const playerId of playerIds) {
     let player;
     try {
-      player = await getPlayer(playerIds[index]);
+      player = await getPlayer(playerId);
     } catch {
       throw new TeamInputError("Player was not found");
     }
     if (!country) country = player.country;
-    players.push({
-      player_id: player.id,
-      name: player.name,
-      country: player.country,
-      photo_url: player.photo_url,
-      role: player.role,
-      sort_order: index + 1,
-    });
+    players.push(player.name);
   }
   return { title: name, teamType: type as TeamOfTheDayType, players, country };
 }
 
-function readPlayers(value: unknown): StoredPlayer[] {
-  if (!Array.isArray(value)) return [];
-  return value.flatMap((item) => {
-    if (!item || typeof item !== "object") return [];
-    const row = item as Record<string, unknown>;
-    return [
-      {
-        player_id: typeof row.player_id === "string" ? row.player_id : "",
-        name: typeof row.name === "string" ? row.name : "",
-        country: typeof row.country === "string" ? row.country : "",
-        photo_url: typeof row.photo_url === "string" ? row.photo_url : null,
-        role: typeof row.role === "string" ? row.role : "",
-        sort_order: typeof row.sort_order === "number" ? row.sort_order : 0,
-      },
-    ];
-  });
+function readPlayers(value: unknown) {
+  if (!Array.isArray(value)) return { names: [] as string[], trim: false };
+  let trim = false;
+  const names: string[] = [];
+  for (const item of value) {
+    if (typeof item === "string") {
+      const name = item.trim();
+      if (name) names.push(name);
+      else trim = true;
+      continue;
+    }
+    trim = true;
+    if (!item || typeof item !== "object") continue;
+    const name = typeof (item as { name?: unknown }).name === "string" ? (item as { name: string }).name.trim() : "";
+    if (name) names.push(name);
+  }
+  return { names, trim };
 }
 
-function readTeam(id: string, data: Record<string, unknown>): StoredTeam & { id: string } {
+function readTeam(id: string, data: Record<string, unknown>): StoredTeam & { id: string; playersNeedTrim: boolean } {
   const teamType = data.team_type === "squad" ? "squad" : "team";
   const status = STATUSES.includes(data.status as TeamOfTheDayStatus) ? (data.status as TeamOfTheDayStatus) : "pending";
+  const players = readPlayers(data.players);
   return {
     id,
     play_date: typeof data.play_date === "string" ? data.play_date : "",
@@ -156,7 +142,8 @@ function readTeam(id: string, data: Record<string, unknown>): StoredTeam & { id:
     team_type: teamType,
     status,
     times_played: typeof data.times_played === "number" ? data.times_played : 0,
-    players: readPlayers(data.players),
+    players: players.names,
+    playersNeedTrim: players.trim,
     created_at: typeof data.created_at === "string" ? data.created_at : "",
     updated_at: typeof data.updated_at === "string" ? data.updated_at : "",
   };
@@ -174,7 +161,7 @@ function toResponse(team: StoredTeam & { id: string }, includePlayers: boolean):
     player_count: team.players.length,
     created_at: team.created_at,
   };
-  if (includePlayers) response.players = team.players satisfies TeamOfTheDayPlayer[];
+  if (includePlayers) response.players = team.players;
   return response;
 }
 
@@ -183,14 +170,15 @@ async function allTeams() {
   return docs.map((item) => readTeam(item.id, item.data));
 }
 
-async function refreshPast(team: StoredTeam & { id: string }) {
+async function refreshPast(team: StoredTeam & { id: string; playersNeedTrim: boolean }) {
   const desired = defaultStatus(team.play_date);
-  if (team.status === "active" && desired === "past") {
-    team.status = "past";
-    team.updated_at = new Date().toISOString();
-    const { id, ...data } = team;
-    await setDocument(COLLECTION, id, data);
-  }
+  const statusChanged = team.status === "active" && desired === "past";
+  if (!statusChanged && !team.playersNeedTrim) return team;
+  if (statusChanged) team.status = "past";
+  team.updated_at = new Date().toISOString();
+  const { id, playersNeedTrim: _trim, ...data } = team;
+  await setDocument(COLLECTION, id, data);
+  team.playersNeedTrim = false;
   return team;
 }
 
@@ -306,7 +294,7 @@ export async function createTeams(value: unknown) {
 export async function updateTeam(id: string, value: unknown) {
   const snap = await getDocument(COLLECTION, id);
   if (!snap) throw new TeamNotFoundError();
-  const { id: existingId, ...existing } = readTeam(snap.id, snap.data);
+  const { id: existingId, playersNeedTrim: _trim, ...existing } = readTeam(snap.id, snap.data);
   const input = parseTeamPayload(value, true);
   const roster = await prepareRoster(input.title, input.teamType, input.playerIds);
   const day = input.dates[0];
@@ -332,7 +320,7 @@ export async function updateTeamStatus(id: string, value: unknown) {
   if (!STATUSES.includes(status as TeamOfTheDayStatus)) throw new TeamInputError("Invalid status");
   const snap = await getDocument(COLLECTION, id);
   if (!snap) throw new TeamNotFoundError();
-  const { id: _existingId, ...existing } = readTeam(snap.id, snap.data);
+  const { id: _existingId, playersNeedTrim: _trim, ...existing } = readTeam(snap.id, snap.data);
   const stored: StoredTeam = { ...existing, status: status as TeamOfTheDayStatus, updated_at: new Date().toISOString() };
   await setDocument(COLLECTION, id, stored);
   return toResponse({ ...stored, id }, true);

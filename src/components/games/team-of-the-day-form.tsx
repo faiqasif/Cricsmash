@@ -36,10 +36,8 @@ export function TeamOfTheDayForm({ team }: TeamOfTheDayFormProps) {
   const [players, setPlayers] = useState<SelectedPlayer[]>(() => {
     const count = playerCountForType(team?.team_type ?? "team");
     const slots = emptyPlayerSlots(count);
-    (team?.players ?? []).forEach((player, index) => {
-      if (index < slots.length) {
-        slots[index] = { id: player.player_id, name: player.name, photo_url: player.photo_url };
-      }
+    (team?.players ?? []).forEach((name, index) => {
+      if (index < slots.length) slots[index] = { id: "", name, photo_url: null };
     });
     return slots;
   });
@@ -63,6 +61,21 @@ export function TeamOfTheDayForm({ team }: TeamOfTheDayFormProps) {
       return current.slice(0, needed);
     });
   }, [needed]);
+
+  useEffect(() => {
+    if (!roster.length) return;
+    setPlayers((current) => {
+      let changed = false;
+      const next = current.map((slot) => {
+        if (slot.id || !slot.name) return slot;
+        const match = roster.find((player) => player.name.trim().toLowerCase() === slot.name.trim().toLowerCase());
+        if (!match) return slot;
+        changed = true;
+        return { id: match.id, name: match.name, photo_url: match.photo_url ?? null };
+      });
+      return changed ? next : current;
+    });
+  }, [roster]);
 
   useEffect(() => {
     if (!country) {

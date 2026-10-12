@@ -4,15 +4,6 @@ import { formatQuizDate } from "@/lib/daily-quiz";
 export type TeamOfTheDayType = "team" | "squad";
 export type TeamOfTheDayStatus = "pending" | "active" | "past";
 
-export type TeamOfTheDayPlayer = {
-  player_id: string;
-  name: string;
-  country: string;
-  photo_url: string | null;
-  role: string;
-  sort_order: number;
-};
-
 export type TeamOfTheDay = {
   id: string;
   play_date: string;
@@ -22,7 +13,7 @@ export type TeamOfTheDay = {
   status: TeamOfTheDayStatus;
   times_played: number;
   player_count: number;
-  players?: TeamOfTheDayPlayer[];
+  players?: string[];
   created_at?: string;
 };
 
