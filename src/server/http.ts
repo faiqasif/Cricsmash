@@ -56,7 +56,7 @@ export function errorResponse(err: unknown) {
       return fail(
         403,
         "permission_denied",
-        "Firebase blocked this request. Sign in, and publish rules that allow signed-in access to players, categories, questions, teamsOfTheDay, playersOfTheDay, and dailyQuizzes.",
+        "Firebase blocked this request. Sign in, and publish rules that allow signed-in access to players, playerCatalog, playerChanges, categories, questions, teamsOfTheDay, playersOfTheDay, and dailyQuizzes.",
       );
     }
     return fail(502, "firebase_error", err.message);

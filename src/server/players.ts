@@ -1,5 +1,6 @@
 import { rankByName } from "@/lib/fuzzy";
-import { deleteDocument, getDocument, listDocuments, patchDocuments, queryDocuments, setDocument, setDocuments } from "@/lib/firebase";
+import { deleteDocument, getDocument, listDocuments, queryDocuments, setDocument } from "@/lib/firebase";
+import { commitPlayerWrites } from "@/server/player-version";
 import type {
   FormatStats,
   Player,
@@ -515,7 +516,14 @@ export async function importPlayers(rows: { row: number; player: unknown }[]) {
     }
   }
   if (ready.length) {
-    await setDocuments(PLAYERS, ready.map((item) => ({ id: item.id, data: item.data })));
+    await commitPlayerWrites(async () =>
+      ready.map((item) => ({
+        id: item.id,
+        op: "upsert" as const,
+        previous: null,
+        data: item.data,
+      })),
+    );
   }
   return {
     saved: ready.map((item) => ({ row: item.row, id: item.id, name: item.name })),
@@ -525,23 +533,26 @@ export async function importPlayers(rows: { row: number; player: unknown }[]) {
 
 export async function createPlayer(payload: PlayerPayload) {
   const id = crypto.randomUUID();
-  const now = new Date().toISOString();
-  await setDocument(PLAYERS, id, toStored(payload, now, now));
+  await commitPlayerWrites(async ({ now }) => [{ id, op: "upsert", previous: null, data: toStored(payload, now, now) }]);
   return getPlayer(id);
 }
 
 export async function updatePlayer(id: string, payload: PlayerPayload) {
-  const existing = await getDocument(PLAYERS, id);
-  if (!existing) throw new PlayerNotFoundError();
-  const createdAt = typeof existing.data.created_at === "string" ? existing.data.created_at : new Date().toISOString();
-  await setDocument(PLAYERS, id, toStored(payload, createdAt, new Date().toISOString()));
+  await commitPlayerWrites(async ({ now, get }) => {
+    const existing = await get(PLAYERS, id);
+    if (!existing) throw new PlayerNotFoundError();
+    const createdAt = typeof existing.data.created_at === "string" ? existing.data.created_at : now;
+    return [{ id, op: "upsert", previous: existing.data, data: toStored(payload, createdAt, now) }];
+  });
   return getPlayer(id);
 }
 
 export async function deletePlayer(id: string) {
-  const existing = await getDocument(PLAYERS, id);
-  if (!existing) throw new PlayerNotFoundError();
-  await deleteDocument(PLAYERS, id);
+  await commitPlayerWrites(async ({ get }) => {
+    const existing = await get(PLAYERS, id);
+    if (!existing) throw new PlayerNotFoundError();
+    return [{ id, op: "delete" }];
+  });
 }
 
 function readField(id: string, data: Record<string, unknown>): PlayerCustomField {
@@ -588,7 +599,7 @@ export async function deletePlayerField(id: string) {
   const existing = await getDocument(FIELDS, id);
   if (!existing) throw new PlayerNotFoundError("Custom field not found.");
   const players = await listDocuments(PLAYERS);
-  const updates = players.flatMap((item) => {
+  const affected = players.flatMap((item) => {
     const fields = item.data.custom_fields;
     if (!Array.isArray(fields)) return [];
     const next = fields.filter((entry) => {
@@ -596,8 +607,28 @@ export async function deletePlayerField(id: string) {
       return (entry as { field_id?: string }).field_id !== id;
     });
     if (next.length === fields.length) return [];
-    return [{ id: item.id, data: { custom_fields: next, updated_at: new Date().toISOString() } }];
+    return [item.id];
   });
-  await patchDocuments(PLAYERS, updates);
+  if (affected.length) {
+    await commitPlayerWrites(async ({ now, get }) => {
+      const writes = [];
+      for (const playerId of affected) {
+        const player = await get(PLAYERS, playerId);
+        if (!player || !Array.isArray(player.data.custom_fields)) continue;
+        const next = player.data.custom_fields.filter((entry) => {
+          if (!entry || typeof entry !== "object") return false;
+          return (entry as { field_id?: string }).field_id !== id;
+        });
+        if (next.length === player.data.custom_fields.length) continue;
+        writes.push({
+          id: playerId,
+          op: "upsert" as const,
+          previous: player.data,
+          data: { ...player.data, custom_fields: next, updated_at: now },
+        });
+      }
+      return writes;
+    });
+  }
   await deleteDocument(FIELDS, id);
 }

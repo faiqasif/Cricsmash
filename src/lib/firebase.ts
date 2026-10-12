@@ -204,8 +204,13 @@ export async function listDocuments(collectionName: string): Promise<StoredDocum
   return docs;
 }
 
-export async function getDocument(collectionName: string, id: string): Promise<StoredDocument | null> {
+export async function getDocument(
+  collectionName: string,
+  id: string,
+  transaction?: string,
+): Promise<StoredDocument | null> {
   const url = new URL(`${documentsBase()}/${collectionName}/${id}`);
+  if (transaction) url.searchParams.set("transaction", transaction);
   try {
     const body = await firebaseFetch(url);
     return readDocument(body);
@@ -213,6 +218,45 @@ export async function getDocument(collectionName: string, id: string): Promise<S
     if (err instanceof Error && /not found/i.test(err.message)) return null;
     throw err;
   }
+}
+
+function documentName(collectionName: string, id: string) {
+  return `projects/${projectId()}/databases/(default)/documents/${collectionName}/${id}`;
+}
+
+export async function beginTransaction() {
+  const url = new URL(`${documentsBase()}:beginTransaction`);
+  const body = await firebaseFetch(url, {
+    method: "POST",
+    body: JSON.stringify({ options: { readWrite: {} } }),
+  });
+  if (typeof body.transaction !== "string" || !body.transaction) {
+    throw new Error("Could not start a save");
+  }
+  return body.transaction;
+}
+
+export function replaceWrite(collectionName: string, id: string, data: Json) {
+  const encoded = encode(data);
+  const fields = "mapValue" in encoded ? encoded.mapValue.fields ?? {} : {};
+  return {
+    update: {
+      name: documentName(collectionName, id),
+      fields,
+    },
+  };
+}
+
+export function deleteWrite(collectionName: string, id: string) {
+  return { delete: documentName(collectionName, id) };
+}
+
+export async function commitTransaction(transaction: string, writes: Json[]) {
+  const url = new URL(`${documentsBase()}:commit`);
+  await firebaseFetch(url, {
+    method: "POST",
+    body: JSON.stringify({ transaction, writes }),
+  });
 }
 
 export async function setDocuments(collectionName: string, docs: { id: string; data: Json }[]) {
