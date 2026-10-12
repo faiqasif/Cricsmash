@@ -124,7 +124,7 @@ service cloud.firestore {
         && data.version > 0
         && data.created_at is string
         && data.updated_at is string
-        && data.keys().size() <= 120;
+        && data.keys().size() <= 200;
     }
 
     function isValidPlayerCatalog(data) {
@@ -137,13 +137,14 @@ service cloud.firestore {
     function isValidPlayerChange(data) {
       return data.version is int
         && data.version > 0
-        && isString(data.player_id, 1, 80)
+        && data.player_id is string
+        && data.player_id.size() > 0
+        && data.player_id.size() <= 80
         && data.op in ['upsert', 'delete']
         && data.fields is map
         && data.removed is list
-        && data.removed.size() <= 400
         && data.created_at is string
-        && data.keys().size() <= 8;
+        && data.keys().size() <= 10;
     }
 
     function isValidPlayerOfTheDay(data) {
@@ -232,7 +233,7 @@ service cloud.firestore {
       allow get, list: if isSignedIn();
       allow create: if isSignedIn() && isValidPlayer(request.resource.data);
       allow update: if isSignedIn() && isValidPlayer(request.resource.data)
-        && request.resource.data.created_at == resource.data.created_at;
+        && (!resource.data.keys().hasAny(['created_at']) || request.resource.data.created_at == resource.data.created_at);
       allow delete: if isSignedIn();
     }
 

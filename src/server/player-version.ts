@@ -1,11 +1,4 @@
-import {
-  beginTransaction,
-  commitTransaction,
-  deleteWrite,
-  getDocument,
-  replaceWrite,
-  type StoredDocument,
-} from "@/lib/firebase";
+import { commitWrites, deleteWrite, getDocument, replaceWrite, type StoredDocument } from "@/lib/firebase";
 
 const PLAYERS = "players";
 const CATALOG = "playerCatalog";
@@ -74,7 +67,11 @@ function catalogVersion(doc: StoredDocument | null) {
 }
 
 function retryable(err: unknown) {
-  return err instanceof Error && err.name === "FirebaseError" && /aborted|contention|expired|unavailable|try again|too much/i.test(err.message);
+  return (
+    err instanceof Error &&
+    err.name === "FirebaseError" &&
+    /aborted|contention|expired|unavailable|try again|too much|precondition|already exists/i.test(err.message)
+  );
 }
 
 export async function commitPlayerWrites(
@@ -85,10 +82,9 @@ export async function commitPlayerWrites(
 ) {
   let lastError: unknown;
   for (let attempt = 0; attempt < 5; attempt += 1) {
-    const transaction = await beginTransaction();
     try {
       const now = new Date().toISOString();
-      const get = (collection: string, id: string) => getDocument(collection, id, transaction);
+      const get = (collection: string, id: string) => getDocument(collection, id);
       const catalog = await get(CATALOG, CATALOG_ID);
       const writes = await build({ now, get });
       if (writes.length === 0) return;
@@ -124,8 +120,10 @@ export async function commitPlayerWrites(
           }),
         );
       }
-      committed.push(replaceWrite(CATALOG, CATALOG_ID, { version, updated_at: now }));
-      await commitTransaction(transaction, committed);
+      const catalogWrite = replaceWrite(CATALOG, CATALOG_ID, { version, updated_at: now });
+      catalogWrite.currentDocument = catalog?.updateTime ? { updateTime: catalog.updateTime } : { exists: false };
+      committed.push(catalogWrite);
+      await commitWrites(committed);
       return;
     } catch (err) {
       lastError = err;

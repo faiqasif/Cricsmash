@@ -14,6 +14,7 @@ type FirestoreValue =
 export type StoredDocument = {
   id: string;
   data: Json;
+  updateTime?: string;
 };
 
 function missing(name: string) {
@@ -120,6 +121,7 @@ function readDocument(body: Json): StoredDocument | null {
   return {
     id: documentId(body.name),
     data: decode({ mapValue: { fields: body.fields as Record<string, FirestoreValue> } }) as Json,
+    updateTime: typeof body.updateTime === "string" ? body.updateTime : undefined,
   };
 }
 
@@ -224,19 +226,7 @@ function documentName(collectionName: string, id: string) {
   return `projects/${projectId()}/databases/(default)/documents/${collectionName}/${id}`;
 }
 
-export async function beginTransaction() {
-  const url = new URL(`${documentsBase()}:beginTransaction`);
-  const body = await firebaseFetch(url, {
-    method: "POST",
-    body: JSON.stringify({ options: { readWrite: {} } }),
-  });
-  if (typeof body.transaction !== "string" || !body.transaction) {
-    throw new Error("Could not start a save");
-  }
-  return body.transaction;
-}
-
-export function replaceWrite(collectionName: string, id: string, data: Json) {
+export function replaceWrite(collectionName: string, id: string, data: Json): Json {
   const encoded = encode(data);
   const fields = "mapValue" in encoded ? encoded.mapValue.fields ?? {} : {};
   return {
@@ -251,11 +241,11 @@ export function deleteWrite(collectionName: string, id: string) {
   return { delete: documentName(collectionName, id) };
 }
 
-export async function commitTransaction(transaction: string, writes: Json[]) {
+export async function commitWrites(writes: Json[]) {
   const url = new URL(`${documentsBase()}:commit`);
   await firebaseFetch(url, {
     method: "POST",
-    body: JSON.stringify({ transaction, writes }),
+    body: JSON.stringify({ writes }),
   });
 }
 
