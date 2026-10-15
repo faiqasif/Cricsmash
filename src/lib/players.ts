@@ -37,6 +37,7 @@ export type Player = {
   date_of_birth: string | null;
   playing_hand: string | null;
   photo_url: string | null;
+  release_version: string | null;
   tournaments_won: number | null;
   captained_international: boolean | null;
   catches: number | null;
@@ -146,6 +147,7 @@ export type PlayerListItem = {
   role: string;
   debut_year: number | null;
   status: "active" | "inactive";
+  version: string | null;
 };
 
 export type PlayerListResponse = {
@@ -154,7 +156,25 @@ export type PlayerListResponse = {
   page: number;
   page_size: number;
   total_pages: number;
+  versions: string[];
 };
+
+const RELEASE_VERSION = /^(?:0|[1-9]\d*)(?:\.(?:0|[1-9]\d*)){0,3}$/;
+
+export function isReleaseVersion(value: string) {
+  return RELEASE_VERSION.test(value);
+}
+
+export function compareReleaseVersions(left: string, right: string) {
+  const a = left.split(".").map(Number);
+  const b = right.split(".").map(Number);
+  const length = Math.max(a.length, b.length);
+  for (let index = 0; index < length; index += 1) {
+    const diff = (a[index] ?? 0) - (b[index] ?? 0);
+    if (diff) return diff;
+  }
+  return 0;
+}
 
 export type PlayerPayload = {
   name: string;
@@ -163,6 +183,7 @@ export type PlayerPayload = {
   date_of_birth?: string | null;
   playing_hand?: string | null;
   photo_url?: string | null;
+  release_version?: string | null;
   tournaments_won?: number | null;
   captained_international?: boolean | null;
   catches?: number | null;

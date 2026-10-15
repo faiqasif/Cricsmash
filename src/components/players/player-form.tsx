@@ -10,7 +10,7 @@ import { CreateFieldModal } from "@/components/players/create-field-modal";
 import { ConfirmDeleteModal, openConfirm } from "@/components/ui/confirm-delete-modal";
 import { COUNTRIES, customAppliesToForRole, FORMAT_LABELS, FORMATS, OPPONENT_COUNTRIES, PLAYING_HANDS, ROLES, TEST_COUNTRIES } from "@/data/cricket";
 import { api, ApiError } from "@/lib/api";
-import type { FormatKey, FormatStats, Player, PlayerCustomField } from "@/lib/players";
+import type { FormatKey, FormatStats, Player, PlayerCustomField, PlayerPayload } from "@/lib/players";
 import {
   playerInitialValues,
   playerPayloadFromValues,
@@ -70,9 +70,11 @@ const labelClass = "mb-2 block text-sm font-medium text-white";
 
 type PlayerFormProps = {
   player?: Player;
+  onBatchSave?: (payload: PlayerPayload) => void;
+  onBatchClose?: () => void;
 };
 
-export function PlayerForm({ player }: PlayerFormProps) {
+export function PlayerForm({ player, onBatchSave, onBatchClose }: PlayerFormProps) {
   const router = useRouter();
   const editing = Boolean(player);
   const [customFields, setCustomFields] = useState<PlayerCustomField[]>([]);
@@ -83,11 +85,15 @@ export function PlayerForm({ player }: PlayerFormProps) {
   const formik = useFormik<PlayerFormValues>({
     initialValues: playerInitialValues(player),
     enableReinitialize: true,
-    validationSchema: playerSchema,
+    validationSchema: onBatchSave ? playerSchema.omit(["release_version"]) : playerSchema,
     onSubmit: async (values, helpers) => {
       helpers.setStatus("");
       try {
         const body = playerPayloadFromValues(values, player?.photo_url ?? null);
+        if (onBatchSave) {
+          onBatchSave(body);
+          return;
+        }
         if (editing && player) {
           await api(`/api/v1/players/${player.id}`, {
             method: "PUT",
@@ -107,7 +113,7 @@ export function PlayerForm({ player }: PlayerFormProps) {
     },
   });
 
-  const title = editing ? "Edit player" : "Add a new player";
+  const title = onBatchSave ? "Update for release" : editing ? "Edit player" : "Add a new player";
   const battingVisible = showsBatting(formik.values.role);
   const bowlingVisible = showsBowling(formik.values.role);
   const keepingVisible = showsKeeping(formik.values.role);
@@ -291,18 +297,22 @@ export function PlayerForm({ player }: PlayerFormProps) {
   return (
     <>
     <form onSubmit={formik.handleSubmit} noValidate className="pb-10">
-      <Link
-        href="/players"
-        className="mb-5 inline-flex items-center gap-2 text-sm text-zinc-400 transition hover:text-white"
-      >
-        <ArrowLeft className="size-4" />
-        Back to players
-      </Link>
+      {onBatchClose ? null : (
+        <Link
+          href="/players"
+          className="mb-5 inline-flex items-center gap-2 text-sm text-zinc-400 transition hover:text-white"
+        >
+          <ArrowLeft className="size-4" />
+          Back to players
+        </Link>
+      )}
 
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h1 className="text-[32px] font-semibold tracking-tight text-white">{title}</h1>
-          <p className="mt-1 text-sm text-zinc-500">Enter player details & statistics</p>
+          <p className="mt-1 text-sm text-zinc-500">
+            {onBatchSave ? "Keep this player for the release. Publishing happens after the version is assigned." : "Enter player details & statistics"}
+          </p>
         </div>
         <button
           type="button"
@@ -353,6 +363,19 @@ export function PlayerForm({ player }: PlayerFormProps) {
             </option>
           ))}
         </SelectField>
+        {onBatchSave ? null : (
+          <Field label="Version" required error={fieldError("release_version")}>
+            <input
+              name="release_version"
+              className={inputClassName(fieldError("release_version"))}
+              value={formik.values.release_version}
+              onChange={formik.handleChange}
+              onBlur={formik.handleBlur}
+              placeholder="1.1"
+            />
+            <p className="mt-2 text-xs text-zinc-500">Many players can share the same version, for example 1.1.</p>
+          </Field>
+        )}
         <SelectField
           label="Playing role"
           required
@@ -855,18 +878,28 @@ export function PlayerForm({ player }: PlayerFormProps) {
       </div>
 
       <div className="mt-8 flex flex-wrap gap-3">
-        <Link
-          href="/players"
-          className="inline-flex h-12 items-center rounded-full border border-purple px-8 text-sm font-medium text-purple"
-        >
-          Cancel
-        </Link>
+        {onBatchClose ? (
+          <button
+            type="button"
+            onClick={onBatchClose}
+            className="inline-flex h-12 items-center rounded-full border border-purple px-8 text-sm font-medium text-purple"
+          >
+            Close
+          </button>
+        ) : (
+          <Link
+            href="/players"
+            className="inline-flex h-12 items-center rounded-full border border-purple px-8 text-sm font-medium text-purple"
+          >
+            Cancel
+          </Link>
+        )}
         <button
           type="submit"
           disabled={formik.isSubmitting}
           className="inline-flex h-12 items-center rounded-full bg-purple px-8 text-sm font-medium text-white shadow-[0_0_24px_rgba(124,92,255,0.35)] disabled:opacity-60"
         >
-          {formik.isSubmitting ? "Saving..." : editing ? "Save Player" : "Add Player"}
+          {formik.isSubmitting ? "Saving..." : onBatchSave ? "Keep for release" : editing ? "Save Player" : "Add Player"}
         </button>
       </div>
     </form>

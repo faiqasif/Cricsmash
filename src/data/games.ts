@@ -4,6 +4,7 @@ export type GameCard = {
   description: string;
   href?: string;
   image: string;
+  scheduled?: boolean;
 };
 
 export const GAME_CARDS: GameCard[] = [
@@ -13,6 +14,7 @@ export const GAME_CARDS: GameCard[] = [
     description: "Create dated cricket quizzes for the app.",
     href: "/games/daily-quiz",
     image: "/games/daily-quiz.png",
+    scheduled: true,
   },
   {
     slug: "player-of-the-day",
@@ -20,6 +22,7 @@ export const GAME_CARDS: GameCard[] = [
     description: "Select a player for each day.",
     href: "/games/player-of-the-day",
     image: "/games/player-of-the-day.png",
+    scheduled: true,
   },
   {
     slug: "higher-or-lower",
@@ -39,5 +42,6 @@ export const GAME_CARDS: GameCard[] = [
     description: "Build the team and prove you know your cricket.",
     href: "/games/team-of-the-day",
     image: "/games/team-of-the-day.png",
+    scheduled: true,
   },
 ];

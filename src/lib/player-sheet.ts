@@ -1,5 +1,5 @@
 import { COUNTRIES } from "@/data/cricket";
-import type { FormatStats, PlayerCustomField, PlayerPayload } from "@/lib/players";
+import { isReleaseVersion, type FormatStats, type PlayerCustomField, type PlayerPayload } from "@/lib/players";
 
 export type SheetKind = "text" | "number" | "date" | "bool" | "role" | "status" | "hand" | "country" | "custom";
 
@@ -67,6 +67,7 @@ export function playerColumns(customFields: Pick<PlayerCustomField, "id" | "name
     career("country", "Country", "country", "Pick a country from the list.", "India", true),
     career("role", "Role", "role", "batsman, bowler, all-rounder, or wicketkeeper. Batter is accepted as batsman.", "batsman", true),
     career("status", "Status", "status", "active or inactive. Leave blank for active.", "active"),
+    career("release_version", "Version", "text", "Shared version such as 1.1. Many players can use the same value.", "1.1"),
     career("date_of_birth", "Date of birth", "date", "YYYY-MM-DD.", "1988-11-05"),
     career("playing_hand", "Playing hand", "hand", "righty or lefty.", "righty"),
     career("photo_url", "Photo URL", "text", "Optional image link.", ""),
@@ -409,6 +410,11 @@ export function parsePlayerRows(
       else if (column.career === "most_dismissals_against_bowler") payload.most_dismissals_against_bowler = text;
       else if (column.career === "most_dismissed_batter") payload.most_dismissed_batter = text || null;
       else if (column.career === "photo_url") payload.photo_url = text || null;
+      else if (column.career === "release_version") {
+        if (!text) payload.release_version = null;
+        else if (isReleaseVersion(text)) payload.release_version = text;
+        else errors.push("Version must look like 1.1");
+      }
     }
 
     if (name && name.length < 2) errors.push("Player name must be at least 2 characters");

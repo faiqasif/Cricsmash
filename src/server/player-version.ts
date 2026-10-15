@@ -1,4 +1,5 @@
 import { commitWrites, deleteWrite, getDocument, replaceWrite, type StoredDocument } from "@/lib/firebase";
+import { compareReleaseVersions, isReleaseVersion } from "@/lib/players";
 
 const PLAYERS = "players";
 const CATALOG = "playerCatalog";
@@ -66,6 +67,18 @@ function catalogVersion(doc: StoredDocument | null) {
   return typeof value === "number" && Number.isInteger(value) && value >= 0 ? value : 0;
 }
 
+function releaseLabel(value: unknown) {
+  if (typeof value !== "string") return null;
+  const text = value.trim();
+  return text && isReleaseVersion(text) ? text : null;
+}
+
+function newerRelease(current: string | null, candidate: string | null) {
+  if (!candidate) return current;
+  if (!current || compareReleaseVersions(candidate, current) > 0) return candidate;
+  return current;
+}
+
 function retryable(err: unknown) {
   return (
     err instanceof Error &&
@@ -79,6 +92,7 @@ export async function commitPlayerWrites(
     now: string;
     get: (collection: string, id: string) => Promise<StoredDocument | null>;
   }) => Promise<PlayerWrite[]>,
+  options?: { releaseVersion?: string },
 ) {
   let lastError: unknown;
   for (let attempt = 0; attempt < 5; attempt += 1) {
@@ -88,9 +102,43 @@ export async function commitPlayerWrites(
       const catalog = await get(CATALOG, CATALOG_ID);
       const writes = await build({ now, get });
       if (writes.length === 0) return;
+      const groupedRelease = options?.releaseVersion?.trim() ?? "";
       let version = catalogVersion(catalog);
+      let release = releaseLabel(catalog?.data.release_version);
       const committed = [];
-      for (const write of writes) {
+      if (groupedRelease) {
+        if (!isReleaseVersion(groupedRelease)) throw new Error("Version must look like 1.1");
+        version += 1;
+        const players: Record<string, unknown>[] = [];
+        for (const write of writes) {
+          if (write.op === "delete") {
+            committed.push(deleteWrite(PLAYERS, write.id));
+            players.push({ player_id: write.id, op: "delete", fields: {}, removed: [] });
+            continue;
+          }
+          const data: Record<string, unknown> = {
+            ...(write.data ?? {}),
+            version,
+            release_version: groupedRelease,
+          };
+          const diff = diffStoredPlayer(write.previous ?? null, data);
+          committed.push(replaceWrite(PLAYERS, write.id, data));
+          players.push({ player_id: write.id, op: "upsert", fields: diff.fields, removed: diff.removed });
+        }
+        committed.push(
+          replaceWrite(CHANGES, String(version), {
+            version,
+            release_version: groupedRelease,
+            op: "bulk",
+            player_id: "bulk",
+            fields: {},
+            removed: [],
+            players,
+            created_at: now,
+          }),
+        );
+        release = newerRelease(release, groupedRelease);
+      } else for (const write of writes) {
         version += 1;
         if (write.op === "delete") {
           committed.push(deleteWrite(PLAYERS, write.id));
@@ -106,7 +154,8 @@ export async function commitPlayerWrites(
           );
           continue;
         }
-        const data = { ...(write.data ?? {}), version };
+        const data: Record<string, unknown> = { ...(write.data ?? {}), version };
+        release = newerRelease(release, releaseLabel(data.release_version));
         const diff = diffStoredPlayer(write.previous ?? null, data);
         committed.push(replaceWrite(PLAYERS, write.id, data));
         committed.push(
@@ -120,7 +169,11 @@ export async function commitPlayerWrites(
           }),
         );
       }
-      const catalogWrite = replaceWrite(CATALOG, CATALOG_ID, { version, updated_at: now });
+      const catalogWrite = replaceWrite(
+        CATALOG,
+        CATALOG_ID,
+        release ? { version, release_version: release, updated_at: now } : { version, updated_at: now },
+      );
       catalogWrite.currentDocument = catalog?.updateTime ? { updateTime: catalog.updateTime } : { exists: false };
       committed.push(catalogWrite);
       await commitWrites(committed);

@@ -1,5 +1,5 @@
 import * as Yup from "yup";
-import type { FormatStats, Player, PlayerPayload } from "@/lib/players";
+import { isReleaseVersion, type FormatStats, type Player, type PlayerPayload } from "@/lib/players";
 
 export type FormFormat = Record<keyof FormatStats, string>;
 
@@ -7,6 +7,7 @@ export type PlayerFormValues = {
   name: string;
   country: string;
   role: string;
+  release_version: string;
   date_of_birth: string;
   playing_hand: string;
   tournaments_won: string;
@@ -265,6 +266,7 @@ export function playerInitialValues(player?: Player): PlayerFormValues {
     name: player?.name ?? "",
     country: player?.country ?? "",
     role: player?.role ?? "",
+    release_version: player?.release_version ?? "",
     date_of_birth: dateToForm(player?.date_of_birth),
     playing_hand: player?.playing_hand ?? "",
     tournaments_won: player?.tournaments_won != null ? String(player.tournaments_won) : "",
@@ -446,6 +448,10 @@ export const playerSchema = Yup.object({
   role: Yup.string()
     .oneOf(["batsman", "bowler", "all-rounder", "wicketkeeper"], "Select a playing role")
     .required("Select a playing role"),
+  release_version: Yup.string()
+    .trim()
+    .required("Enter a version such as 1.1")
+    .test("release-version", "Use a version such as 1.1", (value) => Boolean(value && isReleaseVersion(value))),
   date_of_birth: Yup.string()
     .trim()
     .test("date", "Enter a valid date of birth", (value) => {
@@ -634,6 +640,7 @@ export function playerPayloadFromValues(values: PlayerFormValues, photoUrl: stri
     name: values.name.trim(),
     country: values.country,
     role: values.role,
+    release_version: values.release_version.trim(),
     date_of_birth: values.date_of_birth.trim() || null,
     playing_hand: values.playing_hand.trim() || null,
     photo_url: photoUrl,

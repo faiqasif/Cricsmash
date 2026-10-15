@@ -12,6 +12,7 @@ export async function GET(request: Request) {
         q: url.searchParams.get("q") ?? "",
         role: url.searchParams.get("role") ?? "",
         country: url.searchParams.get("country") ?? "",
+        version: url.searchParams.get("version") ?? "",
         page: Number(url.searchParams.get("page") ?? "1"),
         pageSize: Number(url.searchParams.get("page_size") ?? "5"),
       });

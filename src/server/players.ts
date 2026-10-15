@@ -1,6 +1,7 @@
 import { rankByName } from "@/lib/fuzzy";
 import { deleteDocument, getDocument, listDocuments, queryDocuments, setDocument } from "@/lib/firebase";
 import { commitPlayerWrites } from "@/server/player-version";
+import { compareReleaseVersions, isReleaseVersion } from "@/lib/players";
 import type {
   FormatStats,
   Player,
@@ -254,11 +255,16 @@ export function parsePlayerPayload(value: unknown): PlayerPayload {
     throw new PlayerInputError("Playing hand must be righty or lefty");
   }
   const bowler = text(body.most_dismissals_against_bowler, 150, "Most dismissals against bowler") ?? "";
+  const releaseVersion = text(body.release_version, 20, "Version");
+  if (releaseVersion && !isReleaseVersion(releaseVersion)) {
+    throw new PlayerInputError("Version must look like 1.1");
+  }
 
   const payload: PlayerPayload = {
     name,
     country: country ?? "",
     role,
+    release_version: releaseVersion,
     date_of_birth: dateOfBirth,
     playing_hand: playingHand,
     photo_url: text(body.photo_url, 4000, "Photo"),
@@ -298,6 +304,7 @@ function readPlayer(id: string, data: Record<string, unknown>): Player {
       role: typeof data.role === "string" ? data.role : "",
       status: data.status === "inactive" ? "inactive" : "active",
       most_dismissals_against_bowler: "",
+      release_version: typeof data.release_version === "string" ? data.release_version : null,
       odi: readLooseFormat(data.odi),
       t20: readLooseFormat(data.t20),
       test: readLooseFormat(data.test),
@@ -317,6 +324,7 @@ function readPlayer(id: string, data: Record<string, unknown>): Player {
     date_of_birth: payload.date_of_birth ?? null,
     playing_hand: payload.playing_hand ?? null,
     photo_url: payload.photo_url ?? null,
+    release_version: payload.release_version ?? null,
     captained_international: payload.captained_international ?? null,
     most_dismissed_batter: payload.most_dismissed_batter ?? null,
     most_dismissals_against_bowler: payload.most_dismissals_against_bowler ?? "",
@@ -390,6 +398,7 @@ function toStored(payload: PlayerPayload, createdAt: string, updatedAt: string) 
   }
   if (!showsKeeping(role)) drop.push("catches");
   for (const key of drop) delete data[key];
+  if (typeof data.release_version !== "string" || !data.release_version) delete data.release_version;
   return data;
 }
 
@@ -400,7 +409,12 @@ function earliestDebut(player: Player) {
   return years.length ? Math.min(...years) : null;
 }
 
-function toListItem(player: Player): PlayerListItem {
+function releaseVersion(data: Record<string, unknown>) {
+  const value = typeof data.release_version === "string" ? data.release_version.trim() : "";
+  return value && isReleaseVersion(value) ? value : null;
+}
+
+function toListItem(player: Player, version: string | null): PlayerListItem {
   return {
     id: player.id,
     name: player.name,
@@ -409,6 +423,7 @@ function toListItem(player: Player): PlayerListItem {
     role: player.role,
     debut_year: earliestDebut(player),
     status: player.status,
+    version,
   };
 }
 
@@ -427,6 +442,7 @@ export async function listPlayers(input: {
   q: string;
   role: string;
   country: string;
+  version: string;
   page: number;
   pageSize: number;
 }): Promise<PlayerListResponse> {
@@ -435,6 +451,7 @@ export async function listPlayers(input: {
   const q = input.q.trim().toLowerCase();
   const role = input.role.trim();
   const country = input.country.trim();
+  const version = input.version.trim();
   const where = [
     ...(role ? [{ field: "role", value: role }] : []),
     ...(country ? [{ field: "country", value: country }] : []),
@@ -442,25 +459,34 @@ export async function listPlayers(input: {
   const docs = await queryDocuments(PLAYERS, {
     where,
     orderBy: { field: "created_at", direction: "DESCENDING" },
-    select: ["name", "country", "role", "status", "photo_url", "created_at", "odi.debut_year", "t20.debut_year", "test.debut_year"],
+    select: ["name", "country", "role", "status", "photo_url", "created_at", "release_version", "odi.debut_year", "t20.debut_year", "test.debut_year"],
   });
   const countryKey = country.toLowerCase();
-  const filtered = docs
-    .map((item) => readPlayer(item.id, item.data))
-    .filter((player) => {
+  const matched = docs
+    .map((item) => ({ player: readPlayer(item.id, item.data), version: releaseVersion(item.data) }))
+    .filter(({ player }) => {
       if (q && !player.name.toLowerCase().includes(q)) return false;
       if (countryKey && player.country.toLowerCase() !== countryKey) return false;
       return true;
     });
+  const versions = [...new Set(matched.flatMap((item) => (item.version == null ? [] : [item.version])))].sort(
+    compareReleaseVersions,
+  );
+  const filtered = matched.filter((item) => {
+    if (!version) return true;
+    if (version === "none") return item.version == null;
+    return item.version === version;
+  });
   const total = filtered.length;
   const totalPages = pageSize > 0 ? Math.ceil(total / pageSize) : 0;
   const start = (page - 1) * pageSize;
   return {
-    items: filtered.slice(start, start + pageSize).map(toListItem),
+    items: filtered.slice(start, start + pageSize).map((item) => toListItem(item.player, item.version)),
     total,
     page,
     page_size: pageSize,
     total_pages: totalPages,
+    versions,
   };
 }
 
@@ -483,7 +509,7 @@ export async function suggestPlayers(input: { q: string; country: string; exclud
   const ranked = query
     ? rankByName(pool, query, (player) => player.name, 0.35)
     : [...pool].sort((a, b) => a.name.localeCompare(b.name)).map((item) => ({ item, score: 1 }));
-  return { items: ranked.slice(0, limit).map((entry) => toListItem(entry.item)) };
+  return { items: ranked.slice(0, limit).map((entry) => toListItem(entry.item, null)) };
 }
 
 export async function getPlayer(id: string) {
@@ -535,6 +561,44 @@ export async function createPlayer(payload: PlayerPayload) {
   const id = crypto.randomUUID();
   await commitPlayerWrites(async ({ now }) => [{ id, op: "upsert", previous: null, data: toStored(payload, now, now) }]);
   return getPlayer(id);
+}
+
+export async function publishPlayerRelease(value: unknown) {
+  const body = asRecord(value, "Release body is invalid");
+  const release = text(body.release_version, 20, "Version", true);
+  if (!release || !isReleaseVersion(release)) throw new PlayerInputError("Version must look like 1.1");
+  if (!Array.isArray(body.players) || body.players.length === 0) {
+    throw new PlayerInputError("Update at least one player");
+  }
+  if (body.players.length > 50) throw new PlayerInputError("Update up to 50 players in one release");
+  const seen = new Set<string>();
+  const parsed: { id: string; payload: PlayerPayload }[] = [];
+  for (const row of body.players) {
+    const record = asRecord(row, "Player update is invalid");
+    const id = text(record.id, 80, "Player", true);
+    if (!id || seen.has(id)) throw new PlayerInputError("Each player can be included once");
+    seen.add(id);
+    parsed.push({ id, payload: parsePlayerPayload({ ...record, release_version: release }) });
+  }
+  await commitPlayerWrites(
+    async ({ now, get }) => {
+      const writes: { id: string; op: "upsert"; previous: Record<string, unknown>; data: Record<string, unknown> }[] = [];
+      for (const item of parsed) {
+        const existing = await get(PLAYERS, item.id);
+        if (!existing) throw new PlayerNotFoundError(`${item.payload.name} was not found`);
+        const createdAt = typeof existing.data.created_at === "string" ? existing.data.created_at : now;
+        writes.push({
+          id: item.id,
+          op: "upsert",
+          previous: existing.data,
+          data: toStored({ ...item.payload, release_version: release }, createdAt, now),
+        });
+      }
+      return writes;
+    },
+    { releaseVersion: release },
+  );
+  return { release_version: release, count: parsed.length };
 }
 
 export async function updatePlayer(id: string, payload: PlayerPayload) {

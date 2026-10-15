@@ -1,0 +1,132 @@
+import { GAME_CARDS } from "@/data/games";
+import { listDocuments, setDocument } from "@/lib/firebase";
+import { listDailyQuizzes } from "@/server/daily-quiz";
+import { notificationTopic, sendGameNotification } from "@/server/fcm";
+import { listPlayerDays } from "@/server/player-of-the-day";
+import { listTeams } from "@/server/team-of-the-day";
+
+const COLLECTION = "notifications";
+
+export class NotificationInputError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "NotificationInputError";
+  }
+}
+
+export type GameNotification = {
+  id: string;
+  title: string;
+  body: string;
+  game: string;
+  game_title: string;
+  play_date: string;
+  game_option: string;
+  topic: string;
+  status: "sent" | "failed";
+  message_id?: string;
+  error?: string;
+  created_at: string;
+};
+
+function gameBySlug(slug: string) {
+  return GAME_CARDS.find((game) => game.slug === slug);
+}
+
+function isDateKey(value: string) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const [year, month, day] = value.split("-").map(Number);
+  const date = new Date(Date.UTC(year, month - 1, day));
+  return date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 && date.getUTCDate() === day;
+}
+
+async function scheduledOption(game: string, playDate: string, gameTitle: string) {
+  if (game === "daily-quiz") {
+    const list = await listDailyQuizzes({ status: "", from: playDate, to: playDate, page: 1, pageSize: 5 });
+    const match = list.items.find((item) => item.quiz_date === playDate);
+    if (!match) throw new NotificationInputError(`No Daily Quiz is scheduled for ${playDate}.`);
+    return `${match.question_count} question${match.question_count === 1 ? "" : "s"}`;
+  }
+  if (game === "player-of-the-day") {
+    const list = await listPlayerDays({ q: "", status: "", from: playDate, to: playDate, page: 1, pageSize: 5 });
+    const match = list.items.find((item) => item.play_date === playDate);
+    if (!match) throw new NotificationInputError(`No Player of the day is scheduled for ${playDate}.`);
+    return `${match.name} · ${match.country}`;
+  }
+  if (game === "team-of-the-day") {
+    const list = await listTeams({ q: "", teamType: "", status: "", from: playDate, to: playDate, page: 1, pageSize: 5 });
+    const match = list.items.find((item) => item.play_date === playDate);
+    if (!match) throw new NotificationInputError(`No Team of the day is scheduled for ${playDate}.`);
+    return `${match.title} · ${match.country}`;
+  }
+  return gameTitle;
+}
+
+export async function parseNotificationPayload(value: unknown) {
+  const body = value && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : {};
+  const title = typeof body.title === "string" ? body.title.trim() : "";
+  const message = typeof body.body === "string" ? body.body.trim() : "";
+  const game = typeof body.game === "string" ? body.game.trim() : "";
+  const playDate = typeof body.play_date === "string" ? body.play_date.trim() : "";
+  const match = gameBySlug(game);
+  if (!match) throw new NotificationInputError("Select a game.");
+  if (!isDateKey(playDate)) throw new NotificationInputError("Choose a game date.");
+  if (title.length < 1 || title.length > 120) throw new NotificationInputError("Title must be between 1 and 120 characters.");
+  if (message.length < 1 || message.length > 500) throw new NotificationInputError("Message must be between 1 and 500 characters.");
+  const gameOption = await scheduledOption(match.slug, playDate, match.title);
+  return { title, body: message, game: match.slug, gameTitle: match.title, playDate, gameOption };
+}
+
+function readNotification(id: string, data: Record<string, unknown>): GameNotification {
+  return {
+    id,
+    title: typeof data.title === "string" ? data.title : "",
+    body: typeof data.body === "string" ? data.body : "",
+    game: typeof data.game === "string" ? data.game : "",
+    game_title: typeof data.game_title === "string" ? data.game_title : "",
+    play_date: typeof data.play_date === "string" ? data.play_date : "",
+    game_option: typeof data.game_option === "string" ? data.game_option : "",
+    topic: typeof data.topic === "string" ? data.topic : notificationTopic(),
+    status: data.status === "failed" ? "failed" : "sent",
+    message_id: typeof data.message_id === "string" ? data.message_id : undefined,
+    error: typeof data.error === "string" ? data.error : undefined,
+    created_at: typeof data.created_at === "string" ? data.created_at : "",
+  };
+}
+
+export async function listNotifications() {
+  const docs = await listDocuments(COLLECTION);
+  return docs
+    .map((item) => readNotification(item.id, item.data))
+    .sort((left, right) => (left.created_at < right.created_at ? 1 : left.created_at > right.created_at ? -1 : 0))
+    .slice(0, 30);
+}
+
+export async function createNotification(value: unknown) {
+  const input = await parseNotificationPayload(value);
+  const id = crypto.randomUUID();
+  const createdAt = new Date().toISOString();
+  let messageId = "";
+  let error = "";
+  try {
+    messageId = await sendGameNotification(input);
+  } catch (err) {
+    error = err instanceof Error ? err.message : "Firebase could not send the notification.";
+  }
+  const stored: Record<string, unknown> = {
+    title: input.title,
+    body: input.body,
+    game: input.game,
+    game_title: input.gameTitle,
+    play_date: input.playDate,
+    game_option: input.gameOption,
+    topic: notificationTopic(),
+    status: messageId ? "sent" : "failed",
+    created_at: createdAt,
+  };
+  if (messageId) stored.message_id = messageId;
+  if (error) stored.error = error.slice(0, 500);
+  await setDocument(COLLECTION, id, stored);
+  if (error) throw new NotificationInputError(error);
+  return readNotification(id, stored);
+}

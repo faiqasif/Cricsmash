@@ -29,12 +29,15 @@ type PlayersTableProps = {
   query: string;
   role: string;
   country: string;
+  version: string;
+  versions: string[];
   page: number;
   pageSize: number;
   totalPages: number;
   onQueryChange: (value: string) => void;
   onRoleChange: (value: string) => void;
   onCountryChange: (value: string) => void;
+  onVersionChange: (value: string) => void;
   onPageChange: (page: number) => void;
   onDelete: (player: PlayerListItem) => void;
   importActions?: ReactNode;
@@ -47,12 +50,15 @@ export function PlayersTable({
   query,
   role,
   country,
+  version,
+  versions,
   page,
   pageSize,
   totalPages,
   onQueryChange,
   onRoleChange,
   onCountryChange,
+  onVersionChange,
   onPageChange,
   onDelete,
   importActions,
@@ -114,7 +120,22 @@ export function PlayersTable({
           ))}
         </FilterSelect>
 
+        <FilterSelect value={version} onChange={onVersionChange} placeholder="All versions">
+          <option value="none">No version</option>
+          {versions.map((item) => (
+            <option key={item} value={item}>
+              {item}
+            </option>
+          ))}
+        </FilterSelect>
+
         {importActions}
+        <Link
+          href="/players/bulk"
+          className="inline-flex h-12 shrink-0 items-center justify-center rounded-full border border-purple px-6 text-sm font-medium text-purple"
+        >
+          Bulk update
+        </Link>
         <Link
           href="/players/new"
           className="inline-flex h-12 shrink-0 items-center justify-center gap-2 rounded-full bg-purple px-6 text-sm font-medium text-white shadow-[0_0_24px_rgba(124,92,255,0.4)] transition hover:bg-[#6d4dff]"
@@ -133,6 +154,7 @@ export function PlayersTable({
               <th className="px-5 py-4 font-medium">Country</th>
               <th className="px-5 py-4 font-medium">Role</th>
               <th className="px-5 py-4 font-medium">Debut Year</th>
+              <th className="px-5 py-4 font-medium">Version</th>
               <th className="px-5 py-4 font-medium">Status</th>
               <th className="px-5 py-4 font-medium">Actions</th>
             </tr>
@@ -140,13 +162,13 @@ export function PlayersTable({
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={7} className="px-5 py-12 text-center text-sm text-zinc-500">
+                <td colSpan={8} className="px-5 py-12 text-center text-sm text-zinc-500">
                   Loading players...
                 </td>
               </tr>
             ) : empty ? (
               <tr>
-                <td colSpan={7} className="px-5 py-12 text-center text-sm text-zinc-500">
+                <td colSpan={8} className="px-5 py-12 text-center text-sm text-zinc-500">
                   No players found.
                 </td>
               </tr>
@@ -186,6 +208,7 @@ export function PlayersTable({
                   </td>
                   <td className="px-5 py-4 text-sm text-zinc-300">{roleLabel(player.role)}</td>
                   <td className="px-5 py-4 text-sm text-zinc-300">{player.debut_year ?? "—"}</td>
+                  <td className="px-5 py-4 text-sm text-zinc-300">{player.version ?? "—"}</td>
                   <td className="px-5 py-4">
                     <span
                       className={`inline-flex rounded-full px-3 py-1 text-xs font-medium ${
