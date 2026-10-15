@@ -129,10 +129,6 @@ export async function commitPlayerWrites(
           replaceWrite(CHANGES, String(version), {
             version,
             release_version: groupedRelease,
-            op: "bulk",
-            player_id: "bulk",
-            fields: {},
-            removed: [],
             players,
             created_at: now,
           }),
