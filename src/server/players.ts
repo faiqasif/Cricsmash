@@ -1,7 +1,7 @@
 import { rankByName } from "@/lib/fuzzy";
 import { deleteDocument, getDocument, listDocuments, queryDocuments, setDocument } from "@/lib/firebase";
 import { commitPlayerWrites } from "@/server/player-version";
-import { compareReleaseVersions, isReleaseVersion } from "@/lib/players";
+import { isReleaseVersion } from "@/lib/players";
 import type {
   FormatStats,
   Player,
@@ -409,12 +409,7 @@ function earliestDebut(player: Player) {
   return years.length ? Math.min(...years) : null;
 }
 
-function releaseVersion(data: Record<string, unknown>) {
-  const value = typeof data.release_version === "string" ? data.release_version.trim() : "";
-  return value && isReleaseVersion(value) ? value : null;
-}
-
-function toListItem(player: Player, version: string | null): PlayerListItem {
+function toListItem(player: Player): PlayerListItem {
   return {
     id: player.id,
     name: player.name,
@@ -423,7 +418,6 @@ function toListItem(player: Player, version: string | null): PlayerListItem {
     role: player.role,
     debut_year: earliestDebut(player),
     status: player.status,
-    version,
   };
 }
 
@@ -442,7 +436,6 @@ export async function listPlayers(input: {
   q: string;
   role: string;
   country: string;
-  version: string;
   page: number;
   pageSize: number;
 }): Promise<PlayerListResponse> {
@@ -451,7 +444,6 @@ export async function listPlayers(input: {
   const q = input.q.trim().toLowerCase();
   const role = input.role.trim();
   const country = input.country.trim();
-  const version = input.version.trim();
   const where = [
     ...(role ? [{ field: "role", value: role }] : []),
     ...(country ? [{ field: "country", value: country }] : []),
@@ -459,57 +451,45 @@ export async function listPlayers(input: {
   const docs = await queryDocuments(PLAYERS, {
     where,
     orderBy: { field: "created_at", direction: "DESCENDING" },
-    select: ["name", "country", "role", "status", "photo_url", "created_at", "release_version", "odi.debut_year", "t20.debut_year", "test.debut_year"],
+    select: ["name", "country", "role", "status", "photo_url", "created_at", "odi.debut_year", "t20.debut_year", "test.debut_year"],
   });
   const countryKey = country.toLowerCase();
   const matched = docs
-    .map((item) => ({ player: readPlayer(item.id, item.data), version: releaseVersion(item.data) }))
-    .filter(({ player }) => {
+    .map((item) => readPlayer(item.id, item.data))
+    .filter((player) => {
       if (q && !player.name.toLowerCase().includes(q)) return false;
       if (countryKey && player.country.toLowerCase() !== countryKey) return false;
       return true;
     });
-  const versions = [...new Set(matched.flatMap((item) => (item.version == null ? [] : [item.version])))].sort(
-    compareReleaseVersions,
-  );
-  const filtered = matched.filter((item) => {
-    if (!version) return true;
-    if (version === "none") return item.version == null;
-    return item.version === version;
-  });
-  const total = filtered.length;
+  const total = matched.length;
   const totalPages = pageSize > 0 ? Math.ceil(total / pageSize) : 0;
   const start = (page - 1) * pageSize;
   return {
-    items: filtered.slice(start, start + pageSize).map((item) => toListItem(item.player, item.version)),
+    items: matched.slice(start, start + pageSize).map((player) => toListItem(player)),
     total,
     page,
     page_size: pageSize,
     total_pages: totalPages,
-    versions,
   };
 }
 
 export async function suggestPlayers(input: { q: string; country: string; exclude: string[]; limit: number }) {
-  const country = input.country.trim();
-  if (!country) throw new PlayerInputError("Enter a team title so we can suggest players from that team");
-  const limit = Number.isFinite(input.limit) && input.limit > 0 ? Math.min(Math.floor(input.limit), 300) : 12;
+  const country = input.country.trim().toLowerCase();
+  const limit = Number.isFinite(input.limit) && input.limit > 0 ? Math.min(Math.floor(input.limit), 2000) : 12;
   const excluded = new Set(input.exclude);
-  const countryKey = country.toLowerCase();
   const pool = (
     await queryDocuments(PLAYERS, {
-      where: [{ field: "status", value: "active" }],
       orderBy: { field: "name", direction: "ASCENDING" },
       select: ["name", "country", "role", "status", "photo_url", "created_at", "odi.debut_year", "t20.debut_year", "test.debut_year"],
     })
   )
     .map((item) => readPlayer(item.id, item.data))
-    .filter((player) => player.country.toLowerCase() === countryKey && !excluded.has(player.id));
+    .filter((player) => !excluded.has(player.id) && (!country || player.country.toLowerCase() === country));
   const query = input.q.trim();
   const ranked = query
     ? rankByName(pool, query, (player) => player.name, 0.35)
     : [...pool].sort((a, b) => a.name.localeCompare(b.name)).map((item) => ({ item, score: 1 }));
-  return { items: ranked.slice(0, limit).map((entry) => toListItem(entry.item, null)) };
+  return { items: ranked.slice(0, limit).map((entry) => toListItem(entry.item)) };
 }
 
 export async function getPlayer(id: string) {
@@ -565,8 +545,6 @@ export async function createPlayer(payload: PlayerPayload) {
 
 export async function publishPlayerRelease(value: unknown) {
   const body = asRecord(value, "Release body is invalid");
-  const release = text(body.release_version, 20, "Version", true);
-  if (!release || !isReleaseVersion(release)) throw new PlayerInputError("Version must look like 1.1");
   if (!Array.isArray(body.players) || body.players.length === 0) {
     throw new PlayerInputError("Update at least one player");
   }
@@ -578,9 +556,9 @@ export async function publishPlayerRelease(value: unknown) {
     const id = text(record.id, 80, "Player", true);
     if (!id || seen.has(id)) throw new PlayerInputError("Each player can be included once");
     seen.add(id);
-    parsed.push({ id, payload: parsePlayerPayload({ ...record, release_version: release }) });
+    parsed.push({ id, payload: parsePlayerPayload(record) });
   }
-  await commitPlayerWrites(
+  const published = await commitPlayerWrites(
     async ({ now, get }) => {
       const writes: { id: string; op: "upsert"; previous: Record<string, unknown>; data: Record<string, unknown> }[] = [];
       for (const item of parsed) {
@@ -591,14 +569,14 @@ export async function publishPlayerRelease(value: unknown) {
           id: item.id,
           op: "upsert",
           previous: existing.data,
-          data: toStored({ ...item.payload, release_version: release }, createdAt, now),
+          data: toStored(item.payload, createdAt, now),
         });
       }
       return writes;
     },
-    { releaseVersion: release },
+    { autoRelease: true },
   );
-  return { release_version: release, count: parsed.length };
+  return { release_version: published.releaseVersion, count: parsed.length };
 }
 
 export async function updatePlayer(id: string, payload: PlayerPayload) {

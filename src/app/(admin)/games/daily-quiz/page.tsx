@@ -4,8 +4,6 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ChevronDown,
-  ChevronLeft,
-  ChevronRight,
   Eye,
   Menu,
   Pencil,
@@ -15,6 +13,7 @@ import {
 import { HeaderActions } from "@/components/layout/header-actions";
 import { useOpenMenu } from "@/components/layout/admin-shell";
 import { ConfirmDeleteModal, openConfirm } from "@/components/ui/confirm-delete-modal";
+import { TablePagination } from "@/components/ui/table-pagination";
 import { ApiError } from "@/lib/api";
 import {
   deleteDailyQuiz,
@@ -277,24 +276,7 @@ export default function DailyQuizListPage() {
           <p>
             {fromRow}-{toRow} of {total}
           </p>
-          <div className="flex gap-2">
-            <button
-              type="button"
-              disabled={page <= 1}
-              onClick={() => setPage((value) => value - 1)}
-              className="rounded-full p-2 hover:bg-white/5 disabled:opacity-40"
-            >
-              <ChevronLeft className="size-4" />
-            </button>
-            <button
-              type="button"
-              disabled={page >= totalPages}
-              onClick={() => setPage((value) => value + 1)}
-              className="rounded-full p-2 hover:bg-white/5 disabled:opacity-40"
-            >
-              <ChevronRight className="size-4" />
-            </button>
-          </div>
+          <TablePagination page={page} totalPages={totalPages} onPageChange={setPage} />
         </div>
       ) : null}
 

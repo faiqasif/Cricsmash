@@ -13,7 +13,6 @@ export type SelectedPlayer = {
 type PlayerSuggestFieldProps = {
   index: number;
   value: SelectedPlayer;
-  country: string | null;
   roster: PlayerListItem[];
   excludeIds: string[];
   disabled?: boolean;
@@ -32,7 +31,6 @@ function initials(name: string) {
 export function PlayerSuggestField({
   index,
   value,
-  country,
   roster,
   excludeIds,
   disabled,
@@ -59,13 +57,12 @@ export function PlayerSuggestField({
   const excludeKey = excludeIds.join(",");
 
   useEffect(() => {
-    if (!country || query.trim().length < 2) {
+    if (query.trim().length < 2) {
       setRemote([]);
       return;
     }
     const timeout = window.setTimeout(() => {
       void suggestPlayers({
-        country,
         q: query.trim(),
         exclude: excludeKey.split(",").filter(Boolean).filter((id) => id !== value.id),
         limit: 8,
@@ -74,7 +71,7 @@ export function PlayerSuggestField({
         .catch(() => setRemote([]));
     }, 180);
     return () => window.clearTimeout(timeout);
-  }, [country, excludeKey, query, value.id]);
+  }, [excludeKey, query, value.id]);
 
   const available = useMemo(
     () => roster.filter((player) => player.id === value.id || !excludeIds.includes(player.id)),
@@ -125,7 +122,7 @@ export function PlayerSuggestField({
         <span className="mr-3 h-4 w-px bg-white/10" />
         <input
           value={query}
-          disabled={disabled || !country}
+          disabled={disabled}
           onChange={(event) => {
             const next = event.target.value;
             setQuery(next);
@@ -153,12 +150,12 @@ export function PlayerSuggestField({
               setOpen(false);
             }
           }}
-          placeholder={country ? "Enter Player Name" : "Enter a team title first"}
+          placeholder="Enter Player Name"
           className="h-full w-full bg-transparent text-sm text-white outline-none placeholder:text-zinc-500 disabled:text-zinc-600"
           autoComplete="off"
         />
       </div>
-      {open && country && suggestions.length > 0 ? (
+      {open && suggestions.length > 0 ? (
         <ul className="absolute z-20 mt-2 max-h-64 w-full overflow-auto rounded-2xl border border-white/8 bg-[#1a1a22] p-2 shadow-[0_16px_40px_rgba(0,0,0,0.45)]">
           {suggestions.map((player, suggestionIndex) => (
             <li key={player.id}>

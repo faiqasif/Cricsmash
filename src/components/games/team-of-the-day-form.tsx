@@ -7,7 +7,6 @@ import { ChevronDown } from "lucide-react";
 import { ErrorText } from "@/components/form/error-text";
 import { PlayerSuggestField, type SelectedPlayer } from "@/components/games/player-suggest-field";
 import { TeamCalendar } from "@/components/games/team-calendar";
-import { countryFromTeamTitle } from "@/data/cricket";
 import { ApiError } from "@/lib/api";
 import { suggestPlayers, type PlayerListItem } from "@/lib/players";
 import {
@@ -51,7 +50,6 @@ export function TeamOfTheDayForm({ team }: TeamOfTheDayFormProps) {
     return `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, "0")}-${String(now.getUTCDate()).padStart(2, "0")}`;
   }, []);
   const minDate = editing && team && team.play_date < today ? team.play_date : today;
-  const country = useMemo(() => countryFromTeamTitle(title), [title]);
   const needed = playerCountForType(teamType || "team");
 
   useEffect(() => {
@@ -78,17 +76,18 @@ export function TeamOfTheDayForm({ team }: TeamOfTheDayFormProps) {
   }, [roster]);
 
   useEffect(() => {
-    if (!country) {
-      setRoster([]);
-      return;
-    }
-    const timeout = window.setTimeout(() => {
-      void suggestPlayers({ country, limit: 300 })
-        .then((data) => setRoster(data.items))
-        .catch(() => setRoster([]));
-    }, 200);
-    return () => window.clearTimeout(timeout);
-  }, [country]);
+    let active = true;
+    void suggestPlayers({ limit: 2000 })
+      .then((data) => {
+        if (active) setRoster(data.items);
+      })
+      .catch(() => {
+        if (active) setRoster([]);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   function setPlayerAt(index: number, value: SelectedPlayer) {
     setPlayers((current) => current.map((player, i) => (i === index ? value : player)));
@@ -99,7 +98,6 @@ export function TeamOfTheDayForm({ team }: TeamOfTheDayFormProps) {
     const nextErrors: Record<string, string> = {};
     if (!teamType) nextErrors.teamType = "Select a team type.";
     if (title.trim().length < 2) nextErrors.title = "Enter a team title.";
-    if (!country) nextErrors.title = "Use a team name we can match, e.g. Pakistan - 2023 ODI World Cup.";
     if (dates.length === 0) nextErrors.dates = "Select at least one date.";
     const missing = players.filter((player) => !player.id);
     if (missing.length) nextErrors.players = `Select ${needed} players from the suggested names.`;
@@ -172,13 +170,6 @@ export function TeamOfTheDayForm({ team }: TeamOfTheDayFormProps) {
               placeholder="e.g., Pakistan - 2023 ODI World Cup"
               className={inputClass}
             />
-            {country ? (
-              <p className="mt-1.5 text-xs text-emerald-300">Suggesting {country} players</p>
-            ) : (
-              <p className="mt-1.5 text-xs text-zinc-500">
-                Start the title with a team name so we can filter players from that side.
-              </p>
-            )}
             <ErrorText message={fieldErrors.title} />
           </label>
 
@@ -191,7 +182,6 @@ export function TeamOfTheDayForm({ team }: TeamOfTheDayFormProps) {
                   key={`${teamType}-${index}`}
                   index={index + 1}
                   value={player}
-                  country={country}
                   roster={roster}
                   excludeIds={players.map((item) => item.id).filter(Boolean)}
                   onChange={(value) => setPlayerAt(index, value)}

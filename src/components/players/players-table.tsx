@@ -2,9 +2,10 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { ChevronDown, ChevronLeft, ChevronRight, Menu, Pencil, Plus, Search, Trash2 } from "lucide-react";
+import { ChevronDown, Menu, Pencil, Plus, Search, Trash2 } from "lucide-react";
 import { HeaderActions } from "@/components/layout/header-actions";
 import { useOpenMenu } from "@/components/layout/admin-shell";
+import { TablePagination } from "@/components/ui/table-pagination";
 import { COUNTRIES, ROLES, flagUrl, roleLabel } from "@/data/cricket";
 import type { PlayerListItem } from "@/lib/players";
 import type { ReactNode } from "react";
@@ -29,15 +30,12 @@ type PlayersTableProps = {
   query: string;
   role: string;
   country: string;
-  version: string;
-  versions: string[];
   page: number;
   pageSize: number;
   totalPages: number;
   onQueryChange: (value: string) => void;
   onRoleChange: (value: string) => void;
   onCountryChange: (value: string) => void;
-  onVersionChange: (value: string) => void;
   onPageChange: (page: number) => void;
   onDelete: (player: PlayerListItem) => void;
   importActions?: ReactNode;
@@ -50,15 +48,12 @@ export function PlayersTable({
   query,
   role,
   country,
-  version,
-  versions,
   page,
   pageSize,
   totalPages,
   onQueryChange,
   onRoleChange,
   onCountryChange,
-  onVersionChange,
   onPageChange,
   onDelete,
   importActions,
@@ -120,15 +115,6 @@ export function PlayersTable({
           ))}
         </FilterSelect>
 
-        <FilterSelect value={version} onChange={onVersionChange} placeholder="All versions">
-          <option value="none">No version</option>
-          {versions.map((item) => (
-            <option key={item} value={item}>
-              {item}
-            </option>
-          ))}
-        </FilterSelect>
-
         {importActions}
         <Link
           href="/players/bulk"
@@ -154,7 +140,6 @@ export function PlayersTable({
               <th className="px-5 py-4 font-medium">Country</th>
               <th className="px-5 py-4 font-medium">Role</th>
               <th className="px-5 py-4 font-medium">Debut Year</th>
-              <th className="px-5 py-4 font-medium">Version</th>
               <th className="px-5 py-4 font-medium">Status</th>
               <th className="px-5 py-4 font-medium">Actions</th>
             </tr>
@@ -162,13 +147,13 @@ export function PlayersTable({
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={8} className="px-5 py-12 text-center text-sm text-zinc-500">
+                <td colSpan={7} className="px-5 py-12 text-center text-sm text-zinc-500">
                   Loading players...
                 </td>
               </tr>
             ) : empty ? (
               <tr>
-                <td colSpan={8} className="px-5 py-12 text-center text-sm text-zinc-500">
+                <td colSpan={7} className="px-5 py-12 text-center text-sm text-zinc-500">
                   No players found.
                 </td>
               </tr>
@@ -208,7 +193,6 @@ export function PlayersTable({
                   </td>
                   <td className="px-5 py-4 text-sm text-zinc-300">{roleLabel(player.role)}</td>
                   <td className="px-5 py-4 text-sm text-zinc-300">{player.debut_year ?? "—"}</td>
-                  <td className="px-5 py-4 text-sm text-zinc-300">{player.version ?? "—"}</td>
                   <td className="px-5 py-4">
                     <span
                       className={`inline-flex rounded-full px-3 py-1 text-xs font-medium ${
@@ -251,40 +235,7 @@ export function PlayersTable({
           <p className="text-sm text-zinc-500">
             Showing {from}-{to} of {total}
           </p>
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              disabled={page <= 1}
-              onClick={() => onPageChange(page - 1)}
-              className="inline-flex size-10 items-center justify-center rounded-full border border-white/10 text-zinc-300 disabled:opacity-40"
-              aria-label="Previous page"
-            >
-              <ChevronLeft className="size-4" />
-            </button>
-            {Array.from({ length: totalPages }, (_, i) => i + 1).map((n) => (
-              <button
-                key={n}
-                type="button"
-                onClick={() => onPageChange(n)}
-                className={`inline-flex size-10 items-center justify-center rounded-full text-sm ${
-                  n === page
-                    ? "bg-purple font-medium text-white"
-                    : "border border-white/10 text-zinc-300"
-                }`}
-              >
-                {n}
-              </button>
-            ))}
-            <button
-              type="button"
-              disabled={page >= totalPages}
-              onClick={() => onPageChange(page + 1)}
-              className="inline-flex size-10 items-center justify-center rounded-full border border-white/10 text-zinc-300 disabled:opacity-40"
-              aria-label="Next page"
-            >
-              <ChevronRight className="size-4" />
-            </button>
-          </div>
+          <TablePagination page={page} totalPages={totalPages} onPageChange={onPageChange} />
         </div>
       ) : null}
     </div>

@@ -4,11 +4,10 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Menu, Search, X } from "lucide-react";
 import { PlayerForm } from "@/components/players/player-form";
-import { HeaderActions } from "@/components/layout/header-actions";
 import { useOpenMenu } from "@/components/layout/admin-shell";
 import { roleLabel } from "@/data/cricket";
 import { api, ApiError } from "@/lib/api";
-import { isReleaseVersion, type Player, type PlayerListItem, type PlayerListResponse, type PlayerPayload } from "@/lib/players";
+import { type Player, type PlayerListItem, type PlayerListResponse, type PlayerPayload } from "@/lib/players";
 
 type Draft = {
   id: string;
@@ -18,8 +17,10 @@ type Draft = {
   payload: PlayerPayload;
 };
 
-const inputClass =
-  "h-12 w-full rounded-full border border-white/8 bg-[#0c0c10] px-5 text-sm text-white outline-none placeholder:text-zinc-500 focus:border-purple/50";
+async function loadNextVersion() {
+  const data = await api<{ next_version: string }>("/api/v1/player-versions");
+  return data.next_version || "1.0";
+}
 
 export default function BulkPlayerUpdatePage() {
   const openMenu = useOpenMenu();
@@ -29,7 +30,7 @@ export default function BulkPlayerUpdatePage() {
   const [drafts, setDrafts] = useState<Draft[]>([]);
   const [editing, setEditing] = useState<Player | null>(null);
   const [loadingPlayer, setLoadingPlayer] = useState(false);
-  const [release, setRelease] = useState("");
+  const [nextVersion, setNextVersion] = useState("1.0");
   const [publishing, setPublishing] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
@@ -58,6 +59,20 @@ export default function BulkPlayerUpdatePage() {
       clearTimeout(timeout);
     };
   }, [query]);
+
+  useEffect(() => {
+    let active = true;
+    void loadNextVersion()
+      .then((value) => {
+        if (active) setNextVersion(value);
+      })
+      .catch(() => {
+        if (active) setNextVersion("1.0");
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   async function openPlayer(id: string) {
     setLoadingPlayer(true);
@@ -91,11 +106,6 @@ export default function BulkPlayerUpdatePage() {
   }
 
   async function publish() {
-    const label = release.trim();
-    if (!isReleaseVersion(label)) {
-      setError("Enter a release version such as 1.1.");
-      return;
-    }
     if (drafts.length === 0) {
       setError("Update at least one player before publishing.");
       return;
@@ -107,13 +117,13 @@ export default function BulkPlayerUpdatePage() {
       const result = await api<{ release_version: string; count: number }>("/api/v1/players/release", {
         method: "POST",
         body: JSON.stringify({
-          release_version: label,
           players: drafts.map((item) => ({ id: item.id, ...item.payload })),
         }),
       });
       setDrafts([]);
-      setRelease("");
-      setNotice(`Published ${result.count} player${result.count === 1 ? "" : "s"} as ${result.release_version}. The catalog moved forward by 1.`);
+      const upcoming = await loadNextVersion().catch(() => nextVersion);
+      setNextVersion(upcoming);
+      setNotice(`Published ${result.count} player${result.count === 1 ? "" : "s"} as ${result.release_version}.`);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Could not publish this release.");
     } finally {
@@ -136,11 +146,10 @@ export default function BulkPlayerUpdatePage() {
           <div>
             <h1 className="text-[28px] font-semibold tracking-tight text-white sm:text-[32px]">Bulk update</h1>
             <p className="mt-1 text-sm text-zinc-500">
-              Update the players first. One release version then publishes them in a single change.
+              Update the players first. Publishing assigns version {nextVersion} automatically.
             </p>
           </div>
         </div>
-        <HeaderActions />
       </div>
 
       {error ? (
@@ -209,16 +218,10 @@ export default function BulkPlayerUpdatePage() {
               ))}
             </div>
 
-            <label className="mt-5 block">
-              <span className="mb-2 block text-sm font-medium text-white">Release version*</span>
-              <input
-                value={release}
-                onChange={(event) => setRelease(event.target.value)}
-                placeholder="2.2"
-                className={inputClass}
-              />
-              <p className="mt-2 text-xs text-zinc-500">Every player in this list gets this version.</p>
-            </label>
+            <p className="mt-5 text-sm text-zinc-300">
+              Next version <span className="font-medium text-white">{nextVersion}</span>
+            </p>
+            <p className="mt-2 text-xs text-zinc-500">Versions start at 1.0 and increase by 0.1 on each publish.</p>
             <button
               type="button"
               onClick={() => void publish()}
@@ -239,7 +242,7 @@ export default function BulkPlayerUpdatePage() {
             <div className="rounded-[28px] bg-[#14141a] px-6 py-16 text-center">
               <p className="text-lg font-medium text-white">Choose a player to update</p>
               <p className="mt-2 text-sm text-zinc-500">
-                Keep each player for the release. Nothing is published until you assign the version and publish.
+                Keep each player for the release. Nothing is published until you publish version {nextVersion}.
               </p>
             </div>
           ) : null}

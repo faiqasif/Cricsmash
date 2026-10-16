@@ -1,8 +1,9 @@
 "use client";
 
-import { ChevronLeft, ChevronRight, Menu, Pencil, Plus, Search, Trash2 } from "lucide-react";
+import { Menu, Pencil, Plus, Search, Trash2 } from "lucide-react";
 import { HeaderActions } from "@/components/layout/header-actions";
 import { useOpenMenu } from "@/components/layout/admin-shell";
+import { TablePagination } from "@/components/ui/table-pagination";
 import type { Category } from "@/lib/questions";
 
 function padIndex(index: number) {
@@ -154,38 +155,7 @@ export function CategoriesTable({
           <p className="text-sm text-zinc-500">
             Showing {from}-{to} of {total}
           </p>
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              disabled={page <= 1}
-              onClick={() => onPageChange(page - 1)}
-              className="inline-flex size-10 items-center justify-center rounded-full border border-white/10 text-zinc-300 disabled:opacity-40"
-              aria-label="Previous page"
-            >
-              <ChevronLeft className="size-4" />
-            </button>
-            {Array.from({ length: totalPages }, (_, i) => i + 1).map((n) => (
-              <button
-                key={n}
-                type="button"
-                onClick={() => onPageChange(n)}
-                className={`inline-flex size-10 items-center justify-center rounded-full text-sm ${
-                  n === page ? "bg-purple font-medium text-white" : "border border-white/10 text-zinc-300"
-                }`}
-              >
-                {n}
-              </button>
-            ))}
-            <button
-              type="button"
-              disabled={page >= totalPages}
-              onClick={() => onPageChange(page + 1)}
-              className="inline-flex size-10 items-center justify-center rounded-full border border-white/10 text-zinc-300 disabled:opacity-40"
-              aria-label="Next page"
-            >
-              <ChevronRight className="size-4" />
-            </button>
-          </div>
+          <TablePagination page={page} totalPages={totalPages} onPageChange={onPageChange} />
         </div>
       ) : null}
     </div>

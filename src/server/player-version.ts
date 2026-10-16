@@ -1,5 +1,5 @@
 import { commitWrites, deleteWrite, getDocument, replaceWrite, type StoredDocument } from "@/lib/firebase";
-import { compareReleaseVersions, isReleaseVersion } from "@/lib/players";
+import { compareReleaseVersions, isReleaseVersion, nextReleaseVersion } from "@/lib/players";
 
 const PLAYERS = "players";
 const CATALOG = "playerCatalog";
@@ -92,8 +92,8 @@ export async function commitPlayerWrites(
     now: string;
     get: (collection: string, id: string) => Promise<StoredDocument | null>;
   }) => Promise<PlayerWrite[]>,
-  options?: { releaseVersion?: string },
-) {
+  options?: { releaseVersion?: string; autoRelease?: boolean },
+): Promise<{ version: number; releaseVersion: string | null }> {
   let lastError: unknown;
   for (let attempt = 0; attempt < 5; attempt += 1) {
     try {
@@ -101,8 +101,10 @@ export async function commitPlayerWrites(
       const get = (collection: string, id: string) => getDocument(collection, id);
       const catalog = await get(CATALOG, CATALOG_ID);
       const writes = await build({ now, get });
-      if (writes.length === 0) return;
-      const groupedRelease = options?.releaseVersion?.trim() ?? "";
+      if (writes.length === 0) return { version: catalogVersion(catalog), releaseVersion: releaseLabel(catalog?.data.release_version) };
+      const groupedRelease = options?.autoRelease
+        ? nextReleaseVersion(releaseLabel(catalog?.data.release_version))
+        : (options?.releaseVersion?.trim() ?? "");
       let version = catalogVersion(catalog);
       let release = releaseLabel(catalog?.data.release_version);
       const committed = [];
@@ -173,7 +175,7 @@ export async function commitPlayerWrites(
       catalogWrite.currentDocument = catalog?.updateTime ? { updateTime: catalog.updateTime } : { exists: false };
       committed.push(catalogWrite);
       await commitWrites(committed);
-      return;
+      return { version, releaseVersion: groupedRelease || release };
     } catch (err) {
       lastError = err;
       if (!retryable(err) || attempt === 4) throw err;

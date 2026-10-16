@@ -147,7 +147,6 @@ export type PlayerListItem = {
   role: string;
   debut_year: number | null;
   status: "active" | "inactive";
-  version: string | null;
 };
 
 export type PlayerListResponse = {
@@ -156,13 +155,20 @@ export type PlayerListResponse = {
   page: number;
   page_size: number;
   total_pages: number;
-  versions: string[];
 };
 
 const RELEASE_VERSION = /^(?:0|[1-9]\d*)(?:\.(?:0|[1-9]\d*)){0,3}$/;
 
 export function isReleaseVersion(value: string) {
   return RELEASE_VERSION.test(value);
+}
+
+export function nextReleaseVersion(current: string | null) {
+  if (!current || !isReleaseVersion(current)) return "1.0";
+  const [major = 1, minor = 0] = current.split(".").map(Number);
+  const nextMinor = minor + 1;
+  if (nextMinor >= 10) return `${major + 1}.0`;
+  return `${major}.${nextMinor}`;
 }
 
 export function compareReleaseVersions(left: string, right: string) {
@@ -271,13 +277,13 @@ export type PlayerPayload = {
 };
 
 export function suggestPlayers(params: {
-  country: string;
+  country?: string;
   q?: string;
   exclude?: string[];
   limit?: number;
 }) {
   const query = new URLSearchParams();
-  query.set("country", params.country);
+  if (params.country) query.set("country", params.country);
   if (params.q) query.set("q", params.q);
   if (params.exclude?.length) query.set("exclude", params.exclude.join(","));
   query.set("limit", String(params.limit ?? 12));

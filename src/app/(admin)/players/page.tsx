@@ -17,8 +17,6 @@ export default function PlayersPage() {
   const [query, setQuery] = useState("");
   const [role, setRole] = useState("");
   const [country, setCountry] = useState("");
-  const [version, setVersion] = useState("");
-  const [versions, setVersions] = useState<string[]>([]);
   const [error, setError] = useState("");
   const [pendingDelete, setPendingDelete] = useState<PlayerListItem | null>(null);
 
@@ -32,7 +30,6 @@ export default function PlayersPage() {
       if (query.trim()) params.set("q", query.trim());
       if (role) params.set("role", role);
       if (country) params.set("country", country);
-      if (version) params.set("version", version);
       const data = await api<PlayerListResponse>(`/api/v1/players?${params.toString()}`);
       if (data.total_pages > 0 && page > data.total_pages) {
         setPage(data.total_pages);
@@ -41,7 +38,6 @@ export default function PlayersPage() {
       setPlayers(data.items);
       setTotal(data.total);
       setTotalPages(data.total_pages);
-      setVersions(data.versions ?? []);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not load players from Firebase.");
       setPlayers([]);
@@ -50,7 +46,7 @@ export default function PlayersPage() {
     } finally {
       setLoading(false);
     }
-  }, [query, role, country, version, page, pageSize]);
+  }, [query, role, country, page, pageSize]);
 
   useEffect(() => {
     const timeout = setTimeout(() => {
@@ -73,8 +69,6 @@ export default function PlayersPage() {
         query={query}
         role={role}
         country={country}
-        version={version}
-        versions={versions}
         page={page}
         pageSize={pageSize}
         totalPages={totalPages}
@@ -88,10 +82,6 @@ export default function PlayersPage() {
         }}
         onCountryChange={(value) => {
           setCountry(value);
-          setPage(1);
-        }}
-        onVersionChange={(value) => {
-          setVersion(value);
           setPage(1);
         }}
         onPageChange={setPage}

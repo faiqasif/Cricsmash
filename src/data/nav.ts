@@ -11,6 +11,7 @@ import {
   MessageCircleQuestion,
   Settings,
   Trophy,
+  Hash,
   UserRound,
   Users,
 } from "lucide-react";
@@ -27,6 +28,7 @@ export const navItems: NavItem[] = [
   { label: "User Management", href: "/users", icon: Users },
   { label: "Category", href: "/categories", icon: FolderOpen },
   { label: "Players", href: "/players", icon: UserRound },
+  { label: "Version Numbers", href: "/player-versions", icon: Hash },
   { label: "Player Questions", href: "/questions/player", icon: HelpCircle },
   { label: "Tournament", href: "/tournaments", icon: Trophy },
   {

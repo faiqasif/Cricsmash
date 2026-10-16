@@ -85,7 +85,7 @@ export function PlayerForm({ player, onBatchSave, onBatchClose }: PlayerFormProp
   const formik = useFormik<PlayerFormValues>({
     initialValues: playerInitialValues(player),
     enableReinitialize: true,
-    validationSchema: onBatchSave ? playerSchema.omit(["release_version"]) : playerSchema,
+    validationSchema: playerSchema.omit(["release_version"]),
     onSubmit: async (values, helpers) => {
       helpers.setStatus("");
       try {
@@ -363,19 +363,6 @@ export function PlayerForm({ player, onBatchSave, onBatchClose }: PlayerFormProp
             </option>
           ))}
         </SelectField>
-        {onBatchSave ? null : (
-          <Field label="Version" required error={fieldError("release_version")}>
-            <input
-              name="release_version"
-              className={inputClassName(fieldError("release_version"))}
-              value={formik.values.release_version}
-              onChange={formik.handleChange}
-              onBlur={formik.handleBlur}
-              placeholder="1.1"
-            />
-            <p className="mt-2 text-xs text-zinc-500">Many players can share the same version, for example 1.1.</p>
-          </Field>
-        )}
         <SelectField
           label="Playing role"
           required
