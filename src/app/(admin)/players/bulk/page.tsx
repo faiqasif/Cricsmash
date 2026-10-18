@@ -17,6 +17,20 @@ type Draft = {
   payload: PlayerPayload;
 };
 
+const DRAFTS_KEY = "cricstreak-bulk-release";
+
+function readDrafts(): Draft[] {
+  try {
+    const raw = sessionStorage.getItem(DRAFTS_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw) as Draft[];
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter((item) => item && typeof item.id === "string" && item.payload && typeof item.payload === "object");
+  } catch {
+    return [];
+  }
+}
+
 async function loadNextVersion() {
   const data = await api<{ next_version: string }>("/api/v1/player-versions");
   return data.next_version || "1.0";
@@ -28,12 +42,23 @@ export default function BulkPlayerUpdatePage() {
   const [results, setResults] = useState<PlayerListItem[]>([]);
   const [searching, setSearching] = useState(false);
   const [drafts, setDrafts] = useState<Draft[]>([]);
+  const [draftsReady, setDraftsReady] = useState(false);
   const [editing, setEditing] = useState<Player | null>(null);
   const [loadingPlayer, setLoadingPlayer] = useState(false);
   const [nextVersion, setNextVersion] = useState("1.0");
   const [publishing, setPublishing] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+
+  useEffect(() => {
+    setDrafts(readDrafts());
+    setDraftsReady(true);
+  }, []);
+
+  useEffect(() => {
+    if (!draftsReady) return;
+    sessionStorage.setItem(DRAFTS_KEY, JSON.stringify(drafts));
+  }, [drafts, draftsReady]);
 
   useEffect(() => {
     let active = true;

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { bestNameMatch, rankByName } from "@/lib/fuzzy";
+import { rankByName } from "@/lib/fuzzy";
 import { suggestPlayers, type PlayerListItem } from "@/lib/players";
 
 export type SelectedPlayer = {
@@ -100,16 +100,11 @@ export function PlayerSuggestField({
       return;
     }
     if (value.id && value.name === trimmed) return;
-    const exact = available.find((player) => player.name.toLowerCase() === trimmed.toLowerCase());
+    const exact =
+      available.find((player) => player.name.toLowerCase() === trimmed.toLowerCase()) ??
+      remote.find((player) => player.name.toLowerCase() === trimmed.toLowerCase());
     if (exact) {
       selectPlayer(exact);
-      return;
-    }
-    const match =
-      bestNameMatch(available, trimmed, (player) => player.name) ??
-      bestNameMatch(remote, trimmed, (player) => player.name);
-    if (match) {
-      selectPlayer(match);
       return;
     }
     onChange({ id: "", name: trimmed, photo_url: null });
@@ -128,7 +123,7 @@ export function PlayerSuggestField({
             setQuery(next);
             setOpen(true);
             setActive(0);
-            if (value.id) onChange({ id: "", name: next, photo_url: null });
+            onChange({ id: "", name: next, photo_url: null });
           }}
           onFocus={() => setOpen(true)}
           onBlur={autocorrect}

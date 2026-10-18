@@ -1,6 +1,6 @@
 import { deleteDocument, getDocument, listDocuments, queryDocuments, setDocument } from "@/lib/firebase";
 import type { TeamOfTheDay, TeamOfTheDayListResponse, TeamOfTheDayStatus, TeamOfTheDayType } from "@/lib/team-of-the-day";
-import { getPlayer } from "@/server/players";
+import { countryFromTeamTitle } from "@/data/cricket";
 
 const COLLECTION = "teamsOfTheDay";
 const TYPES = ["team", "squad"] as const;
@@ -81,34 +81,31 @@ function uniqueDates(values: string[], allowPast: boolean) {
   return dates;
 }
 
-async function prepareRoster(title: string, teamType: string, playerIds: string[]) {
+function prepareRoster(title: string, teamType: string, playerNames: string[]) {
   const name = title.trim();
   if (name.length < 2 || name.length > 200) throw new TeamInputError("Title must be between 2 and 200 characters");
   const type = teamType.trim().toLowerCase();
   if (type !== "team" && type !== "squad") throw new TeamInputError("Team type must be team or squad");
   const want = COUNTS[type];
-  if (playerIds.length !== want) {
+  if (playerNames.length !== want) {
     throw new TeamInputError(`${type === "squad" ? "Squad" : "Team"} must have ${want} players`);
   }
   const seen = new Set<string>();
-  for (const id of playerIds) {
-    if (!id.trim()) throw new TeamInputError("Each player is required");
-    if (seen.has(id)) throw new TeamInputError("Players must be unique");
-    seen.add(id);
-  }
   const players: string[] = [];
-  let country = "";
-  for (const playerId of playerIds) {
-    let player;
-    try {
-      player = await getPlayer(playerId);
-    } catch {
-      throw new TeamInputError("Player was not found");
-    }
-    if (!country) country = player.country;
-    players.push(player.name);
+  for (const raw of playerNames) {
+    const playerName = raw.trim();
+    if (playerName.length < 2 || playerName.length > 150) throw new TeamInputError("Each player name must be between 2 and 150 characters");
+    const key = playerName.toLowerCase();
+    if (seen.has(key)) throw new TeamInputError("Players must be unique");
+    seen.add(key);
+    players.push(playerName);
   }
-  return { title: name, teamType: type as TeamOfTheDayType, players, country };
+  return {
+    title: name,
+    teamType: type as TeamOfTheDayType,
+    players,
+    country: countryFromTeamTitle(name) ?? "International",
+  };
 }
 
 function readPlayers(value: unknown) {
@@ -186,7 +183,9 @@ export function parseTeamPayload(value: unknown, editing: boolean) {
   const body = asRecord(value, "Team body is invalid");
   const title = typeof body.title === "string" ? body.title : "";
   const teamType = typeof body.team_type === "string" ? body.team_type : "";
-  const playerIds = Array.isArray(body.player_ids) ? body.player_ids.filter((id): id is string => typeof id === "string") : [];
+  const playerNames = Array.isArray(body.player_names)
+    ? body.player_names.filter((item): item is string => typeof item === "string")
+    : [];
   const rawDates = Array.isArray(body.dates)
     ? body.dates.filter((item): item is string => typeof item === "string")
     : typeof body.play_date === "string"
@@ -194,7 +193,7 @@ export function parseTeamPayload(value: unknown, editing: boolean) {
       : [];
   const dates = uniqueDates(rawDates, editing);
   if (editing && dates.length !== 1) throw new TeamInputError("Choose exactly one date when editing");
-  return { title, teamType, playerIds, dates };
+  return { title, teamType, playerNames, dates };
 }
 
 export async function listTeams(input: {
@@ -264,7 +263,7 @@ export async function getTeam(id: string) {
 
 export async function createTeams(value: unknown) {
   const input = parseTeamPayload(value, false);
-  const roster = await prepareRoster(input.title, input.teamType, input.playerIds);
+  const roster = prepareRoster(input.title, input.teamType, input.playerNames);
   const existing = await allTeams();
   const taken = new Set(existing.map((team) => team.play_date));
   if (input.dates.some((day) => taken.has(day))) {
@@ -296,7 +295,7 @@ export async function updateTeam(id: string, value: unknown) {
   if (!snap) throw new TeamNotFoundError();
   const { id: existingId, playersNeedTrim: _trim, ...existing } = readTeam(snap.id, snap.data);
   const input = parseTeamPayload(value, true);
-  const roster = await prepareRoster(input.title, input.teamType, input.playerIds);
+  const roster = prepareRoster(input.title, input.teamType, input.playerNames);
   const day = input.dates[0];
   const clash = (await allTeams()).some((team) => team.play_date === day && team.id !== existingId);
   if (clash) throw new TeamConflictError("A team already exists for one of the selected dates");

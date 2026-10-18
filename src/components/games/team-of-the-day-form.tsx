@@ -99,10 +99,9 @@ export function TeamOfTheDayForm({ team }: TeamOfTheDayFormProps) {
     if (!teamType) nextErrors.teamType = "Select a team type.";
     if (title.trim().length < 2) nextErrors.title = "Enter a team title.";
     if (dates.length === 0) nextErrors.dates = "Select at least one date.";
-    const missing = players.filter((player) => !player.id);
-    if (missing.length) nextErrors.players = `Select ${needed} players from the suggested names.`;
-    const ids = players.map((player) => player.id).filter(Boolean);
-    if (new Set(ids).size !== ids.length) nextErrors.players = "Players must be unique.";
+    const names = players.map((player) => player.name.trim());
+    if (names.some((name) => name.length < 2)) nextErrors.players = `Enter a name for all ${needed} players.`;
+    else if (new Set(names.map((name) => name.toLowerCase())).size !== names.length) nextErrors.players = "Players must be unique.";
     setFieldErrors(nextErrors);
     if (Object.keys(nextErrors).length) return;
 
@@ -114,7 +113,7 @@ export function TeamOfTheDayForm({ team }: TeamOfTheDayFormProps) {
           title: title.trim(),
           team_type: teamType as TeamOfTheDayType,
           play_date: dates[0],
-          player_ids: ids,
+          player_names: names,
         });
         router.push(`/games/team-of-the-day/${team.id}`);
       } else {
@@ -122,7 +121,7 @@ export function TeamOfTheDayForm({ team }: TeamOfTheDayFormProps) {
           title: title.trim(),
           team_type: teamType as TeamOfTheDayType,
           dates,
-          player_ids: ids,
+          player_names: names,
         });
         router.push("/games/team-of-the-day");
       }
@@ -175,7 +174,7 @@ export function TeamOfTheDayForm({ team }: TeamOfTheDayFormProps) {
 
           <div>
             <p className={labelClass}>Add Players*</p>
-            <p className="mb-3 text-xs text-zinc-500">Enter {needed} players</p>
+            <p className="mb-3 text-xs text-zinc-500">Enter {needed} players. A name that is not in the database is saved as typed.</p>
             <div className="space-y-3">
               {players.map((player, index) => (
                 <PlayerSuggestField

@@ -30,7 +30,7 @@ export type TeamOfTheDayPayload = {
   team_type: TeamOfTheDayType;
   dates?: string[];
   play_date?: string;
-  player_ids: string[];
+  player_names: string[];
 };
 
 export const TEAM_PLAYER_COUNTS: Record<TeamOfTheDayType, number> = {
