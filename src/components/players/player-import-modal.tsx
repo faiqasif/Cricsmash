@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useId, useRef, useState } from "react";
-import { Download, FileSpreadsheet, Upload } from "lucide-react";
+import { ChevronDown, FileSpreadsheet, Upload } from "lucide-react";
 import { api, ApiError } from "@/lib/api";
 import { downloadPlayerTemplate, readPlayerWorkbook } from "@/lib/player-excel";
 import type { TemplateRole } from "@/lib/player-sheet";
@@ -14,6 +14,43 @@ type ImportResult = {
   saved: { row: number; id: string; name: string }[];
   failed: { row: number; message: string }[];
 };
+
+const TEMPLATE_ROLES = [
+  ["batsman", "Batter"],
+  ["bowler", "Bowler"],
+  ["all-rounder", "All-rounder"],
+  ["wicketkeeper", "Wicketkeeper"],
+] as const;
+
+function TemplateSelect({
+  onSelect,
+  className,
+}: {
+  onSelect: (role: TemplateRole) => void;
+  className: string;
+}) {
+  return (
+    <div className="relative shrink-0">
+      <select
+        value=""
+        aria-label="Excel template"
+        onChange={(event) => {
+          const role = event.target.value as TemplateRole;
+          if (role) onSelect(role);
+        }}
+        className={className}
+      >
+        <option value="">Excel template</option>
+        {TEMPLATE_ROLES.map(([role, label]) => (
+          <option key={role} value={role}>
+            {label}
+          </option>
+        ))}
+      </select>
+      <ChevronDown className="pointer-events-none absolute right-4 top-1/2 size-4 -translate-y-1/2 text-zinc-500" />
+    </div>
+  );
+}
 
 export function PlayerImportActions({ onSaved }: { onSaved: () => Promise<void> | void }) {
   const [open, setOpen] = useState(false);
@@ -120,24 +157,10 @@ export function PlayerImportActions({ onSaved }: { onSaved: () => Promise<void> 
 
   return (
     <>
-      {(
-        [
-          ["batsman", "Batter template"],
-          ["bowler", "Bowler template"],
-          ["all-rounder", "All-rounder template"],
-          ["wicketkeeper", "Wicketkeeper template"],
-        ] as const
-      ).map(([role, label]) => (
-        <button
-          key={role}
-          type="button"
-          onClick={() => void download(role)}
-          className="inline-flex h-12 shrink-0 items-center justify-center gap-2 rounded-full border border-white/10 bg-[#14141a] px-5 text-sm font-medium text-white transition hover:border-purple/50"
-        >
-          <Download className="size-4" />
-          {label}
-        </button>
-      ))}
+      <TemplateSelect
+        onSelect={(role) => void download(role)}
+        className="h-12 appearance-none rounded-full border border-white/10 bg-[#14141a] py-0 pl-5 pr-11 text-sm font-medium text-white outline-none"
+      />
       <button
         type="button"
         onClick={() => {
@@ -173,24 +196,10 @@ export function PlayerImportActions({ onSaved }: { onSaved: () => Promise<void> 
           </p>
 
           <div className="mt-5 flex flex-wrap items-center gap-3">
-            {(
-              [
-                ["batsman", "Batter"],
-                ["bowler", "Bowler"],
-                ["all-rounder", "All-rounder"],
-                ["wicketkeeper", "Wicketkeeper"],
-              ] as const
-            ).map(([role, label]) => (
-              <button
-                key={role}
-                type="button"
-                onClick={() => void download(role)}
-                className="inline-flex h-11 items-center gap-2 rounded-full border border-purple px-5 text-sm font-medium text-purple"
-              >
-                <Download className="size-4" />
-                {label}
-              </button>
-            ))}
+            <TemplateSelect
+              onSelect={(role) => void download(role)}
+              className="h-11 appearance-none rounded-full border border-purple bg-transparent py-0 pl-5 pr-11 text-sm font-medium text-purple outline-none"
+            />
             <label className="inline-flex h-11 cursor-pointer items-center gap-2 rounded-full bg-purple px-5 text-sm font-medium text-white">
               <Upload className="size-4" />
               {reading ? "Reading..." : "Choose file"}
