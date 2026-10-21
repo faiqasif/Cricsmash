@@ -34,6 +34,7 @@ type QuestionsTableProps = {
   showCategoryFilter?: boolean;
   showUsed?: boolean;
   used?: string;
+  toolbarExtra?: React.ReactNode;
 };
 
 export function QuestionsTable({
@@ -59,6 +60,7 @@ export function QuestionsTable({
   showCategoryFilter = true,
   showUsed = false,
   used = "",
+  toolbarExtra,
 }: QuestionsTableProps) {
   const empty = !loading && questions.length === 0;
   const from = total === 0 ? 0 : (page - 1) * pageSize + 1;
@@ -123,6 +125,7 @@ export function QuestionsTable({
           </FilterSelect>
         ) : null}
 
+        {toolbarExtra}
         <Link
           href={`${basePath}/new`}
           className="inline-flex h-12 shrink-0 items-center justify-center gap-2 rounded-full bg-purple px-6 text-sm font-medium text-white shadow-[0_0_24px_rgba(124,92,255,0.4)] transition hover:bg-[#6d4dff]"

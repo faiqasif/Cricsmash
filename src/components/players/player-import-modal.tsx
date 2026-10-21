@@ -4,6 +4,7 @@ import { useEffect, useId, useRef, useState } from "react";
 import { Download, FileSpreadsheet, Upload } from "lucide-react";
 import { api, ApiError } from "@/lib/api";
 import { downloadPlayerTemplate, readPlayerWorkbook } from "@/lib/player-excel";
+import type { TemplateRole } from "@/lib/player-sheet";
 import type { PlayerCustomField } from "@/lib/players";
 import type { ParsedPlayerRow } from "@/lib/player-sheet";
 
@@ -46,10 +47,10 @@ export function PlayerImportActions({ onSaved }: { onSaved: () => Promise<void> 
     }
   }
 
-  async function download() {
+  async function download(role: TemplateRole) {
     const next = fields.length ? fields : await loadFields();
     setFields(next);
-    await downloadPlayerTemplate(next);
+    await downloadPlayerTemplate(next, role);
   }
 
   function resetFile() {
@@ -119,14 +120,24 @@ export function PlayerImportActions({ onSaved }: { onSaved: () => Promise<void> 
 
   return (
     <>
-      <button
-        type="button"
-        onClick={() => void download()}
-        className="inline-flex h-12 shrink-0 items-center justify-center gap-2 rounded-full border border-white/10 bg-[#14141a] px-5 text-sm font-medium text-white transition hover:border-purple/50"
-      >
-        <Download className="size-4" />
-        Excel template
-      </button>
+      {(
+        [
+          ["batsman", "Batter template"],
+          ["bowler", "Bowler template"],
+          ["all-rounder", "All-rounder template"],
+          ["wicketkeeper", "Wicketkeeper template"],
+        ] as const
+      ).map(([role, label]) => (
+        <button
+          key={role}
+          type="button"
+          onClick={() => void download(role)}
+          className="inline-flex h-12 shrink-0 items-center justify-center gap-2 rounded-full border border-white/10 bg-[#14141a] px-5 text-sm font-medium text-white transition hover:border-purple/50"
+        >
+          <Download className="size-4" />
+          {label}
+        </button>
+      ))}
       <button
         type="button"
         onClick={() => {
@@ -158,18 +169,28 @@ export function PlayerImportActions({ onSaved }: { onSaved: () => Promise<void> 
             Import players
           </h2>
           <p className="mt-2 text-sm leading-6 text-zinc-400">
-            Download the template, fill one player per row on the Players sheet, then import it. Valid rows are shown here before they are saved.
+            Download the template for one role, fill one player per row on the Players sheet, then import it. A batter file only includes batter fields. The same applies to bowler, all-rounder, and wicketkeeper.
           </p>
 
           <div className="mt-5 flex flex-wrap items-center gap-3">
-            <button
-              type="button"
-              onClick={() => void download()}
-              className="inline-flex h-11 items-center gap-2 rounded-full border border-purple px-5 text-sm font-medium text-purple"
-            >
-              <Download className="size-4" />
-              Download template
-            </button>
+            {(
+              [
+                ["batsman", "Batter"],
+                ["bowler", "Bowler"],
+                ["all-rounder", "All-rounder"],
+                ["wicketkeeper", "Wicketkeeper"],
+              ] as const
+            ).map(([role, label]) => (
+              <button
+                key={role}
+                type="button"
+                onClick={() => void download(role)}
+                className="inline-flex h-11 items-center gap-2 rounded-full border border-purple px-5 text-sm font-medium text-purple"
+              >
+                <Download className="size-4" />
+                {label}
+              </button>
+            ))}
             <label className="inline-flex h-11 cursor-pointer items-center gap-2 rounded-full bg-purple px-5 text-sm font-medium text-white">
               <Upload className="size-4" />
               {reading ? "Reading..." : "Choose file"}

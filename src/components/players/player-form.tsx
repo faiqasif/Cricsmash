@@ -204,18 +204,38 @@ export function PlayerForm({ player, onBatchSave, onBatchClose }: PlayerFormProp
       for (const key of [
         "wickets_home_test",
         "wickets_away_test",
+        "wickets_vs_pakistan",
         "wickets_vs_india",
         "wickets_vs_australia",
         "wickets_vs_england",
         "wickets_vs_south_africa",
+        "wickets_vs_pakistan_odi",
+        "wickets_vs_india_odi",
+        "wickets_vs_australia_odi",
+        "wickets_vs_england_odi",
+        "wickets_vs_south_africa_odi",
+        "wickets_vs_pakistan_t20",
+        "wickets_vs_india_t20",
+        "wickets_vs_australia_t20",
+        "wickets_vs_england_t20",
+        "wickets_vs_south_africa_t20",
         "wickets_in_india",
         "wickets_in_australia",
         "wickets_in_england",
         "wickets_in_south_africa",
         "odi_wc_wickets",
         "odi_wc_bowling_strike_rate",
+        "odi_wc_bowling_average",
+        "odi_wc_bowling_economy",
         "t20_wc_wickets",
         "t20_wc_bowling_strike_rate",
+        "t20_wc_bowling_average",
+        "t20_wc_bowling_economy",
+        "ct_wickets",
+        "ct_bowling_strike_rate",
+        "ct_bowling_average",
+        "ct_bowling_economy",
+        "ct_player_of_match",
       ] as const) {
         void formik.setFieldValue(key, "");
       }
@@ -243,6 +263,21 @@ export function PlayerForm({ player, onBatchSave, onBatchClose }: PlayerFormProp
         "batting_avg_vs_australia_odi",
         "batting_avg_vs_england_odi",
         "batting_avg_vs_south_africa_odi",
+        "batting_avg_vs_pakistan_t20",
+        "batting_avg_vs_india_t20",
+        "batting_avg_vs_australia_t20",
+        "batting_avg_vs_england_t20",
+        "batting_avg_vs_south_africa_t20",
+        "batting_sr_vs_pakistan_t20",
+        "batting_sr_vs_india_t20",
+        "batting_sr_vs_australia_t20",
+        "batting_sr_vs_england_t20",
+        "batting_sr_vs_south_africa_t20",
+        "ct_batting_average",
+        "ct_strike_rate",
+        "ct_fifties",
+        "ct_hundreds",
+        "ct_highest_score",
         "hundreds_vs_pakistan_test",
         "hundreds_vs_india_test",
         "hundreds_vs_australia_test",
@@ -311,7 +346,9 @@ export function PlayerForm({ player, onBatchSave, onBatchClose }: PlayerFormProp
         <div>
           <h1 className="text-[32px] font-semibold tracking-tight text-white">{title}</h1>
           <p className="mt-1 text-sm text-zinc-500">
-            {onBatchSave ? "Keep this player for the release. Publishing happens after the version is assigned." : "Enter player details & statistics"}
+            {onBatchSave
+              ? "Keep this player for the release. The version is created when you publish."
+              : "Saving updates this player now. The change is included the next time a version is created."}
           </p>
         </div>
         <button
@@ -572,6 +609,36 @@ export function PlayerForm({ player, onBatchSave, onBatchClose }: PlayerFormProp
               onBlur={formik.handleBlur}
             />
             <CountryFields
+              label="Batting average vs Pakistan, India, Australia, England, South Africa in T20s"
+              countries={OPPONENT_COUNTRIES}
+              names={{
+                Pakistan: "batting_avg_vs_pakistan_t20",
+                India: "batting_avg_vs_india_t20",
+                Australia: "batting_avg_vs_australia_t20",
+                England: "batting_avg_vs_england_t20",
+                "South Africa": "batting_avg_vs_south_africa_t20",
+              }}
+              values={formik.values}
+              fieldError={fieldError}
+              onChange={formik.handleChange}
+              onBlur={formik.handleBlur}
+            />
+            <CountryFields
+              label="Batting strike rate vs Pakistan, India, Australia, England, South Africa in T20s"
+              countries={OPPONENT_COUNTRIES}
+              names={{
+                Pakistan: "batting_sr_vs_pakistan_t20",
+                India: "batting_sr_vs_india_t20",
+                Australia: "batting_sr_vs_australia_t20",
+                England: "batting_sr_vs_england_t20",
+                "South Africa": "batting_sr_vs_south_africa_t20",
+              }}
+              values={formik.values}
+              fieldError={fieldError}
+              onChange={formik.handleChange}
+              onBlur={formik.handleBlur}
+            />
+            <CountryFields
               label="No of hundreds vs Pakistan, India, Australia, England, South Africa in Tests"
               countries={OPPONENT_COUNTRIES}
               names={{
@@ -642,14 +709,6 @@ export function PlayerForm({ player, onBatchSave, onBatchClose }: PlayerFormProp
                 { name: "odi_wc_fifties", label: "No of 50s" },
                 { name: "odi_wc_player_of_match", label: "Player of the Match awards" },
                 { name: "odi_wc_highest_score", label: "Highest Score" },
-                { name: "odi_wc_final_batting_average", label: "Batting average in finals" },
-                { name: "odi_wc_final_hundreds", label: "No of 100s in finals" },
-                { name: "odi_wc_final_fifties", label: "No of 50s in finals" },
-                { name: "odi_wc_final_highest_score", label: "Highest score in finals" },
-                { name: "odi_wc_semi_batting_average", label: "Batting average in semifinals" },
-                { name: "odi_wc_semi_hundreds", label: "No of 100s in semifinals" },
-                { name: "odi_wc_semi_fifties", label: "No of 50s in semifinals" },
-                { name: "odi_wc_semi_highest_score", label: "Highest score in semifinals" },
               ]}
               values={formik.values}
               fieldError={fieldError}
@@ -665,14 +724,20 @@ export function PlayerForm({ player, onBatchSave, onBatchClose }: PlayerFormProp
                 { name: "t20_wc_fifties", label: "No of 50s" },
                 { name: "t20_wc_player_of_match", label: "Player of the Match awards" },
                 { name: "t20_wc_highest_score", label: "Highest Score" },
-                { name: "t20_wc_final_batting_average", label: "Batting average in finals" },
-                { name: "t20_wc_final_strike_rate", label: "Batting strike rate in finals" },
-                { name: "t20_wc_final_fifties", label: "No of 50s in finals" },
-                { name: "t20_wc_final_highest_score", label: "Highest score in finals" },
-                { name: "t20_wc_semi_batting_average", label: "Batting average in semifinals" },
-                { name: "t20_wc_semi_strike_rate", label: "Batting strike rate in semifinals" },
-                { name: "t20_wc_semi_fifties", label: "No of 50s in semifinals" },
-                { name: "t20_wc_semi_highest_score", label: "Highest score in semifinals" },
+              ]}
+              values={formik.values}
+              fieldError={fieldError}
+              onChange={formik.handleChange}
+              onBlur={formik.handleBlur}
+            />
+            <WorldCupSection
+              title="Champions Trophy Stats"
+              fields={[
+                { name: "ct_batting_average", label: "Batting average" },
+                { name: "ct_strike_rate", label: "Batting strike rate" },
+                { name: "ct_fifties", label: "No of 50s" },
+                { name: "ct_hundreds", label: "No of 100s" },
+                { name: "ct_highest_score", label: "Highest score" },
               ]}
               values={formik.values}
               fieldError={fieldError}
@@ -733,8 +798,10 @@ export function PlayerForm({ player, onBatchSave, onBatchClose }: PlayerFormProp
               onBlur={formik.handleBlur}
             />
             <CountryFields
-              label="Number of wickets vs India, Australia, England, South Africa"
+              label="Number of wickets vs Pakistan, India, Australia, England and South Africa in Test"
+              countries={OPPONENT_COUNTRIES}
               names={{
+                Pakistan: "wickets_vs_pakistan",
                 India: "wickets_vs_india",
                 Australia: "wickets_vs_australia",
                 England: "wickets_vs_england",
@@ -758,6 +825,36 @@ export function PlayerForm({ player, onBatchSave, onBatchClose }: PlayerFormProp
               onChange={formik.handleChange}
               onBlur={formik.handleBlur}
             />
+            <CountryFields
+              label="Number of wickets vs Pakistan, India, Australia, England and South Africa in ODIs"
+              countries={OPPONENT_COUNTRIES}
+              names={{
+                Pakistan: "wickets_vs_pakistan_odi",
+                India: "wickets_vs_india_odi",
+                Australia: "wickets_vs_australia_odi",
+                England: "wickets_vs_england_odi",
+                "South Africa": "wickets_vs_south_africa_odi",
+              }}
+              values={formik.values}
+              fieldError={fieldError}
+              onChange={formik.handleChange}
+              onBlur={formik.handleBlur}
+            />
+            <CountryFields
+              label="Number of wickets vs Pakistan, India, Australia, England and South Africa in T20s"
+              countries={OPPONENT_COUNTRIES}
+              names={{
+                Pakistan: "wickets_vs_pakistan_t20",
+                India: "wickets_vs_india_t20",
+                Australia: "wickets_vs_australia_t20",
+                England: "wickets_vs_england_t20",
+                "South Africa": "wickets_vs_south_africa_t20",
+              }}
+              values={formik.values}
+              fieldError={fieldError}
+              onChange={formik.handleChange}
+              onBlur={formik.handleBlur}
+            />
             {bowlingCustom.map((field) => (
               <CustomFormatRow
                 key={field.id}
@@ -774,6 +871,8 @@ export function PlayerForm({ player, onBatchSave, onBatchClose }: PlayerFormProp
               fields={[
                 { name: "odi_wc_wickets", label: "No of wickets" },
                 { name: "odi_wc_bowling_strike_rate", label: "Bowling strike rate" },
+                { name: "odi_wc_bowling_average", label: "Bowling average" },
+                { name: "odi_wc_bowling_economy", label: "Bowling economy" },
                 { name: "odi_wc_player_of_match", label: "Player of the Match awards" },
               ]}
               values={formik.values}
@@ -786,7 +885,23 @@ export function PlayerForm({ player, onBatchSave, onBatchClose }: PlayerFormProp
               fields={[
                 { name: "t20_wc_wickets", label: "No of wickets" },
                 { name: "t20_wc_bowling_strike_rate", label: "Bowling strike rate" },
+                { name: "t20_wc_bowling_average", label: "Bowling average" },
+                { name: "t20_wc_bowling_economy", label: "Bowling economy" },
                 { name: "t20_wc_player_of_match", label: "Player of the Match awards" },
+              ]}
+              values={formik.values}
+              fieldError={fieldError}
+              onChange={formik.handleChange}
+              onBlur={formik.handleBlur}
+            />
+            <WorldCupSection
+              title="Champions Trophy stats"
+              fields={[
+                { name: "ct_wickets", label: "No of wickets" },
+                { name: "ct_bowling_strike_rate", label: "Bowling strike rate" },
+                { name: "ct_bowling_average", label: "Bowling average" },
+                { name: "ct_bowling_economy", label: "Bowling economy" },
+                { name: "ct_player_of_match", label: "Player of the Match awards" },
               ]}
               values={formik.values}
               fieldError={fieldError}

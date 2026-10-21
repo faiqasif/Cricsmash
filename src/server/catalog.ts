@@ -315,7 +315,7 @@ async function buildQuestion(value: unknown, existing?: Question): Promise<Store
   const status = typeof body.status === "string" && body.status.trim() ? body.status.trim().toLowerCase() : "active";
   if (status !== "active" && status !== "inactive") throw new CatalogInputError("Invalid status");
   let categoryId = typeof body.category_id === "string" ? body.category_id.trim() : "";
-  if (type === "general") {
+  if (type === "general" && !categoryId) {
     categoryId = (await ensureGeneralCategory()).id;
   } else if (!categoryId) {
     throw new CatalogInputError("Category is required");
@@ -368,6 +368,50 @@ export async function createQuestion(value: unknown) {
   const id = crypto.randomUUID();
   await setDocument(QUESTIONS, id, stored);
   return readQuestion(id, stored);
+}
+
+export async function importGeneralQuestions(value: unknown) {
+  const body = asRecord(value, "Import body is invalid");
+  if (!Array.isArray(body.questions) || body.questions.length === 0) {
+    throw new CatalogInputError("Add at least one question");
+  }
+  if (body.questions.length > 200) throw new CatalogInputError("Import up to 200 questions at a time");
+  const categories = await allCategories();
+  const saved: { row: number; id: string; title: string }[] = [];
+  const failed: { row: number; message: string }[] = [];
+  for (const entry of body.questions) {
+    const record = entry && typeof entry === "object" ? (entry as Record<string, unknown>) : null;
+    const row = record && typeof record.row === "number" ? record.row : 0;
+    try {
+      if (!record) throw new CatalogInputError("Question is invalid");
+      const categoryName = typeof record.category === "string" ? record.category.trim() : "";
+      let categoryId = "";
+      if (categoryName) {
+        const match = categories.find((item) => item.name.toLowerCase() === categoryName.toLowerCase());
+        if (!match) throw new CatalogInputError(`Category “${categoryName}” was not found`);
+        categoryId = match.id;
+      }
+      const created = await createQuestion({
+        type: "general",
+        title: record.title,
+        category_id: categoryId,
+        status: "active",
+        option_1: record.option_1,
+        option_2: record.option_2,
+        option_3: record.option_3,
+        option_4: record.option_4,
+        correct_option: record.correct_option,
+      });
+      if (record.used === true) await setQuestionUsed(created.id, { used: true });
+      saved.push({ row, id: created.id, title: created.title });
+    } catch (err) {
+      failed.push({
+        row,
+        message: err instanceof CatalogInputError ? err.message : "This row could not be saved",
+      });
+    }
+  }
+  return { saved, failed };
 }
 
 export async function updateQuestion(id: string, value: unknown) {

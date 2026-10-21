@@ -60,12 +60,33 @@ export type Player = {
   batting_avg_vs_australia_odi: number | null;
   batting_avg_vs_england_odi: number | null;
   batting_avg_vs_south_africa_odi: number | null;
+  batting_avg_vs_pakistan_t20: number | null;
+  batting_avg_vs_india_t20: number | null;
+  batting_avg_vs_australia_t20: number | null;
+  batting_avg_vs_england_t20: number | null;
+  batting_avg_vs_south_africa_t20: number | null;
+  batting_sr_vs_pakistan_t20: number | null;
+  batting_sr_vs_india_t20: number | null;
+  batting_sr_vs_australia_t20: number | null;
+  batting_sr_vs_england_t20: number | null;
+  batting_sr_vs_south_africa_t20: number | null;
   wickets_home_test: number | null;
   wickets_away_test: number | null;
+  wickets_vs_pakistan: number | null;
   wickets_vs_india: number | null;
   wickets_vs_australia: number | null;
   wickets_vs_england: number | null;
   wickets_vs_south_africa: number | null;
+  wickets_vs_pakistan_odi: number | null;
+  wickets_vs_india_odi: number | null;
+  wickets_vs_australia_odi: number | null;
+  wickets_vs_england_odi: number | null;
+  wickets_vs_south_africa_odi: number | null;
+  wickets_vs_pakistan_t20: number | null;
+  wickets_vs_india_t20: number | null;
+  wickets_vs_australia_t20: number | null;
+  wickets_vs_england_t20: number | null;
+  wickets_vs_south_africa_t20: number | null;
   wickets_in_india: number | null;
   wickets_in_australia: number | null;
   wickets_in_england: number | null;
@@ -117,6 +138,20 @@ export type Player = {
   t20_wc_semi_highest_score: number | null;
   t20_wc_wickets: number | null;
   t20_wc_bowling_strike_rate: number | null;
+  odi_wc_bowling_average: number | null;
+  odi_wc_bowling_economy: number | null;
+  t20_wc_bowling_average: number | null;
+  t20_wc_bowling_economy: number | null;
+  ct_batting_average: number | null;
+  ct_strike_rate: number | null;
+  ct_fifties: number | null;
+  ct_hundreds: number | null;
+  ct_highest_score: number | null;
+  ct_wickets: number | null;
+  ct_bowling_strike_rate: number | null;
+  ct_bowling_average: number | null;
+  ct_bowling_economy: number | null;
+  ct_player_of_match: number | null;
   status: "active" | "inactive";
   odi: FormatStats;
   t20: FormatStats;
@@ -157,29 +192,24 @@ export type PlayerListResponse = {
   total_pages: number;
 };
 
-const RELEASE_VERSION = /^(?:0|[1-9]\d*)(?:\.(?:0|[1-9]\d*)){0,3}$/;
+const RELEASE_VERSION = /^(?:0|[1-9]\d*)(?:\.\d{1,2})?$/;
 
 export function isReleaseVersion(value: string) {
   return RELEASE_VERSION.test(value);
 }
 
 export function nextReleaseVersion(current: string | null) {
-  if (!current || !isReleaseVersion(current)) return "1.0";
-  const [major = 1, minor = 0] = current.split(".").map(Number);
-  const nextMinor = minor + 1;
-  if (nextMinor >= 10) return `${major + 1}.0`;
-  return `${major}.${nextMinor}`;
+  if (!current || !isReleaseVersion(current)) return "1.00";
+  const numeric = Number(current);
+  if (!Number.isFinite(numeric)) return "1.00";
+  return (Math.round((numeric + 0.01) * 100) / 100).toFixed(2);
 }
 
 export function compareReleaseVersions(left: string, right: string) {
-  const a = left.split(".").map(Number);
-  const b = right.split(".").map(Number);
-  const length = Math.max(a.length, b.length);
-  for (let index = 0; index < length; index += 1) {
-    const diff = (a[index] ?? 0) - (b[index] ?? 0);
-    if (diff) return diff;
-  }
-  return 0;
+  const a = Number(left);
+  const b = Number(right);
+  if (Number.isFinite(a) && Number.isFinite(b)) return a - b;
+  return left.localeCompare(right);
 }
 
 export type PlayerPayload = {
@@ -212,12 +242,33 @@ export type PlayerPayload = {
   batting_avg_vs_australia_odi?: number | null;
   batting_avg_vs_england_odi?: number | null;
   batting_avg_vs_south_africa_odi?: number | null;
+  batting_avg_vs_pakistan_t20?: number | null;
+  batting_avg_vs_india_t20?: number | null;
+  batting_avg_vs_australia_t20?: number | null;
+  batting_avg_vs_england_t20?: number | null;
+  batting_avg_vs_south_africa_t20?: number | null;
+  batting_sr_vs_pakistan_t20?: number | null;
+  batting_sr_vs_india_t20?: number | null;
+  batting_sr_vs_australia_t20?: number | null;
+  batting_sr_vs_england_t20?: number | null;
+  batting_sr_vs_south_africa_t20?: number | null;
   wickets_home_test?: number | null;
   wickets_away_test?: number | null;
+  wickets_vs_pakistan?: number | null;
   wickets_vs_india?: number | null;
   wickets_vs_australia?: number | null;
   wickets_vs_england?: number | null;
   wickets_vs_south_africa?: number | null;
+  wickets_vs_pakistan_odi?: number | null;
+  wickets_vs_india_odi?: number | null;
+  wickets_vs_australia_odi?: number | null;
+  wickets_vs_england_odi?: number | null;
+  wickets_vs_south_africa_odi?: number | null;
+  wickets_vs_pakistan_t20?: number | null;
+  wickets_vs_india_t20?: number | null;
+  wickets_vs_australia_t20?: number | null;
+  wickets_vs_england_t20?: number | null;
+  wickets_vs_south_africa_t20?: number | null;
   wickets_in_india?: number | null;
   wickets_in_australia?: number | null;
   wickets_in_england?: number | null;
@@ -269,6 +320,20 @@ export type PlayerPayload = {
   t20_wc_semi_highest_score?: number | null;
   t20_wc_wickets?: number | null;
   t20_wc_bowling_strike_rate?: number | null;
+  odi_wc_bowling_average?: number | null;
+  odi_wc_bowling_economy?: number | null;
+  t20_wc_bowling_average?: number | null;
+  t20_wc_bowling_economy?: number | null;
+  ct_batting_average?: number | null;
+  ct_strike_rate?: number | null;
+  ct_fifties?: number | null;
+  ct_hundreds?: number | null;
+  ct_highest_score?: number | null;
+  ct_wickets?: number | null;
+  ct_bowling_strike_rate?: number | null;
+  ct_bowling_average?: number | null;
+  ct_bowling_economy?: number | null;
+  ct_player_of_match?: number | null;
   status: "active" | "inactive";
   odi?: FormatStats;
   t20?: FormatStats;

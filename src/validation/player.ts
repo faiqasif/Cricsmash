@@ -32,12 +32,33 @@ export type PlayerFormValues = {
   batting_avg_vs_australia_odi: string;
   batting_avg_vs_england_odi: string;
   batting_avg_vs_south_africa_odi: string;
+  batting_avg_vs_pakistan_t20: string;
+  batting_avg_vs_india_t20: string;
+  batting_avg_vs_australia_t20: string;
+  batting_avg_vs_england_t20: string;
+  batting_avg_vs_south_africa_t20: string;
+  batting_sr_vs_pakistan_t20: string;
+  batting_sr_vs_india_t20: string;
+  batting_sr_vs_australia_t20: string;
+  batting_sr_vs_england_t20: string;
+  batting_sr_vs_south_africa_t20: string;
   wickets_home_test: string;
   wickets_away_test: string;
+  wickets_vs_pakistan: string;
   wickets_vs_india: string;
   wickets_vs_australia: string;
   wickets_vs_england: string;
   wickets_vs_south_africa: string;
+  wickets_vs_pakistan_odi: string;
+  wickets_vs_india_odi: string;
+  wickets_vs_australia_odi: string;
+  wickets_vs_england_odi: string;
+  wickets_vs_south_africa_odi: string;
+  wickets_vs_pakistan_t20: string;
+  wickets_vs_india_t20: string;
+  wickets_vs_australia_t20: string;
+  wickets_vs_england_t20: string;
+  wickets_vs_south_africa_t20: string;
   wickets_in_india: string;
   wickets_in_australia: string;
   wickets_in_england: string;
@@ -89,6 +110,20 @@ export type PlayerFormValues = {
   t20_wc_semi_highest_score: string;
   t20_wc_wickets: string;
   t20_wc_bowling_strike_rate: string;
+  odi_wc_bowling_average: string;
+  odi_wc_bowling_economy: string;
+  t20_wc_bowling_average: string;
+  t20_wc_bowling_economy: string;
+  ct_batting_average: string;
+  ct_strike_rate: string;
+  ct_fifties: string;
+  ct_hundreds: string;
+  ct_highest_score: string;
+  ct_wickets: string;
+  ct_bowling_strike_rate: string;
+  ct_bowling_average: string;
+  ct_bowling_economy: string;
+  ct_player_of_match: string;
   status: "active" | "inactive";
   photo: File | null;
   odi: FormFormat;
@@ -159,15 +194,36 @@ export const BATTING_TEST_KEYS = [
   "batting_avg_vs_australia_odi",
   "batting_avg_vs_england_odi",
   "batting_avg_vs_south_africa_odi",
+  "batting_avg_vs_pakistan_t20",
+  "batting_avg_vs_india_t20",
+  "batting_avg_vs_australia_t20",
+  "batting_avg_vs_england_t20",
+  "batting_avg_vs_south_africa_t20",
+  "batting_sr_vs_pakistan_t20",
+  "batting_sr_vs_india_t20",
+  "batting_sr_vs_australia_t20",
+  "batting_sr_vs_england_t20",
+  "batting_sr_vs_south_africa_t20",
 ] as const;
 
 export const BOWLING_TEST_KEYS = [
   "wickets_home_test",
   "wickets_away_test",
+  "wickets_vs_pakistan",
   "wickets_vs_india",
   "wickets_vs_australia",
   "wickets_vs_england",
   "wickets_vs_south_africa",
+  "wickets_vs_pakistan_odi",
+  "wickets_vs_india_odi",
+  "wickets_vs_australia_odi",
+  "wickets_vs_england_odi",
+  "wickets_vs_south_africa_odi",
+  "wickets_vs_pakistan_t20",
+  "wickets_vs_india_t20",
+  "wickets_vs_australia_t20",
+  "wickets_vs_england_t20",
+  "wickets_vs_south_africa_t20",
   "wickets_in_india",
   "wickets_in_australia",
   "wickets_in_england",
@@ -206,6 +262,9 @@ export const BATTING_EXTRA_INT_KEYS = [
   "t20_wc_final_highest_score",
   "t20_wc_semi_fifties",
   "t20_wc_semi_highest_score",
+  "ct_fifties",
+  "ct_hundreds",
+  "ct_highest_score",
 ] as const;
 
 export const BATTING_EXTRA_FLOAT_KEYS = [
@@ -219,10 +278,22 @@ export const BATTING_EXTRA_FLOAT_KEYS = [
   "t20_wc_final_strike_rate",
   "t20_wc_semi_batting_average",
   "t20_wc_semi_strike_rate",
+  "ct_batting_average",
+  "ct_strike_rate",
 ] as const;
 
-export const BOWLING_WC_INT_KEYS = ["odi_wc_wickets", "t20_wc_wickets"] as const;
-export const BOWLING_WC_FLOAT_KEYS = ["odi_wc_bowling_strike_rate", "t20_wc_bowling_strike_rate"] as const;
+export const BOWLING_WC_INT_KEYS = ["odi_wc_wickets", "t20_wc_wickets", "ct_wickets", "ct_player_of_match"] as const;
+export const BOWLING_WC_FLOAT_KEYS = [
+  "odi_wc_bowling_strike_rate",
+  "t20_wc_bowling_strike_rate",
+  "odi_wc_bowling_average",
+  "odi_wc_bowling_economy",
+  "t20_wc_bowling_average",
+  "t20_wc_bowling_economy",
+  "ct_bowling_strike_rate",
+  "ct_bowling_average",
+  "ct_bowling_economy",
+] as const;
 const WC_SHARED_INT_KEYS = ["odi_wc_player_of_match", "t20_wc_player_of_match"] as const;
 
 export const emptyFormat = (): FormFormat => ({
@@ -294,9 +365,30 @@ export function playerInitialValues(player?: Player): PlayerFormValues {
     batting_avg_vs_australia_odi: numToForm(player?.batting_avg_vs_australia_odi),
     batting_avg_vs_england_odi: numToForm(player?.batting_avg_vs_england_odi),
     batting_avg_vs_south_africa_odi: numToForm(player?.batting_avg_vs_south_africa_odi),
+    batting_avg_vs_pakistan_t20: numToForm(player?.batting_avg_vs_pakistan_t20),
+    batting_avg_vs_india_t20: numToForm(player?.batting_avg_vs_india_t20),
+    batting_avg_vs_australia_t20: numToForm(player?.batting_avg_vs_australia_t20),
+    batting_avg_vs_england_t20: numToForm(player?.batting_avg_vs_england_t20),
+    batting_avg_vs_south_africa_t20: numToForm(player?.batting_avg_vs_south_africa_t20),
+    batting_sr_vs_pakistan_t20: numToForm(player?.batting_sr_vs_pakistan_t20),
+    batting_sr_vs_india_t20: numToForm(player?.batting_sr_vs_india_t20),
+    batting_sr_vs_australia_t20: numToForm(player?.batting_sr_vs_australia_t20),
+    batting_sr_vs_england_t20: numToForm(player?.batting_sr_vs_england_t20),
+    batting_sr_vs_south_africa_t20: numToForm(player?.batting_sr_vs_south_africa_t20),
     wickets_home_test: numToForm(player?.wickets_home_test),
     wickets_away_test: numToForm(player?.wickets_away_test),
+    wickets_vs_pakistan: numToForm(player?.wickets_vs_pakistan),
     wickets_vs_india: numToForm(player?.wickets_vs_india),
+    wickets_vs_pakistan_odi: numToForm(player?.wickets_vs_pakistan_odi),
+    wickets_vs_india_odi: numToForm(player?.wickets_vs_india_odi),
+    wickets_vs_australia_odi: numToForm(player?.wickets_vs_australia_odi),
+    wickets_vs_england_odi: numToForm(player?.wickets_vs_england_odi),
+    wickets_vs_south_africa_odi: numToForm(player?.wickets_vs_south_africa_odi),
+    wickets_vs_pakistan_t20: numToForm(player?.wickets_vs_pakistan_t20),
+    wickets_vs_india_t20: numToForm(player?.wickets_vs_india_t20),
+    wickets_vs_australia_t20: numToForm(player?.wickets_vs_australia_t20),
+    wickets_vs_england_t20: numToForm(player?.wickets_vs_england_t20),
+    wickets_vs_south_africa_t20: numToForm(player?.wickets_vs_south_africa_t20),
     wickets_vs_australia: numToForm(player?.wickets_vs_australia),
     wickets_vs_england: numToForm(player?.wickets_vs_england),
     wickets_vs_south_africa: numToForm(player?.wickets_vs_south_africa),
@@ -351,6 +443,20 @@ export function playerInitialValues(player?: Player): PlayerFormValues {
     t20_wc_semi_highest_score: numToForm(player?.t20_wc_semi_highest_score),
     t20_wc_wickets: numToForm(player?.t20_wc_wickets),
     t20_wc_bowling_strike_rate: numToForm(player?.t20_wc_bowling_strike_rate),
+    odi_wc_bowling_average: numToForm(player?.odi_wc_bowling_average),
+    odi_wc_bowling_economy: numToForm(player?.odi_wc_bowling_economy),
+    t20_wc_bowling_average: numToForm(player?.t20_wc_bowling_average),
+    t20_wc_bowling_economy: numToForm(player?.t20_wc_bowling_economy),
+    ct_batting_average: numToForm(player?.ct_batting_average),
+    ct_strike_rate: numToForm(player?.ct_strike_rate),
+    ct_fifties: numToForm(player?.ct_fifties),
+    ct_hundreds: numToForm(player?.ct_hundreds),
+    ct_highest_score: numToForm(player?.ct_highest_score),
+    ct_wickets: numToForm(player?.ct_wickets),
+    ct_bowling_strike_rate: numToForm(player?.ct_bowling_strike_rate),
+    ct_bowling_average: numToForm(player?.ct_bowling_average),
+    ct_bowling_economy: numToForm(player?.ct_bowling_economy),
+    ct_player_of_match: numToForm(player?.ct_player_of_match),
     status: player?.status ?? "active",
     photo: null,
     odi: formatFromPlayer(player?.odi),
@@ -503,9 +609,30 @@ export const playerSchema = Yup.object({
   batting_avg_vs_australia_odi: optionalDecimal("Enter a valid batting average"),
   batting_avg_vs_england_odi: optionalDecimal("Enter a valid batting average"),
   batting_avg_vs_south_africa_odi: optionalDecimal("Enter a valid batting average"),
+  batting_avg_vs_pakistan_t20: optionalDecimal("Enter a valid batting average"),
+  batting_avg_vs_india_t20: optionalDecimal("Enter a valid batting average"),
+  batting_avg_vs_australia_t20: optionalDecimal("Enter a valid batting average"),
+  batting_avg_vs_england_t20: optionalDecimal("Enter a valid batting average"),
+  batting_avg_vs_south_africa_t20: optionalDecimal("Enter a valid batting average"),
+  batting_sr_vs_pakistan_t20: optionalDecimal("Enter a valid strike rate", 0, 1000),
+  batting_sr_vs_india_t20: optionalDecimal("Enter a valid strike rate", 0, 1000),
+  batting_sr_vs_australia_t20: optionalDecimal("Enter a valid strike rate", 0, 1000),
+  batting_sr_vs_england_t20: optionalDecimal("Enter a valid strike rate", 0, 1000),
+  batting_sr_vs_south_africa_t20: optionalDecimal("Enter a valid strike rate", 0, 1000),
   wickets_home_test: optionalWholeNumber("Enter a valid wicket count"),
   wickets_away_test: optionalWholeNumber("Enter a valid wicket count"),
+  wickets_vs_pakistan: optionalWholeNumber("Enter a valid wicket count"),
   wickets_vs_india: optionalWholeNumber("Enter a valid wicket count"),
+  wickets_vs_pakistan_odi: optionalWholeNumber("Enter a valid wicket count"),
+  wickets_vs_india_odi: optionalWholeNumber("Enter a valid wicket count"),
+  wickets_vs_australia_odi: optionalWholeNumber("Enter a valid wicket count"),
+  wickets_vs_england_odi: optionalWholeNumber("Enter a valid wicket count"),
+  wickets_vs_south_africa_odi: optionalWholeNumber("Enter a valid wicket count"),
+  wickets_vs_pakistan_t20: optionalWholeNumber("Enter a valid wicket count"),
+  wickets_vs_india_t20: optionalWholeNumber("Enter a valid wicket count"),
+  wickets_vs_australia_t20: optionalWholeNumber("Enter a valid wicket count"),
+  wickets_vs_england_t20: optionalWholeNumber("Enter a valid wicket count"),
+  wickets_vs_south_africa_t20: optionalWholeNumber("Enter a valid wicket count"),
   wickets_vs_australia: optionalWholeNumber("Enter a valid wicket count"),
   wickets_vs_england: optionalWholeNumber("Enter a valid wicket count"),
   wickets_vs_south_africa: optionalWholeNumber("Enter a valid wicket count"),
@@ -560,6 +687,20 @@ export const playerSchema = Yup.object({
   t20_wc_semi_highest_score: optionalWholeNumber("Enter a valid highest score"),
   t20_wc_wickets: optionalWholeNumber("Enter a valid wicket count"),
   t20_wc_bowling_strike_rate: optionalDecimal("Enter a valid bowling strike rate"),
+  odi_wc_bowling_average: optionalDecimal("Enter a valid bowling average"),
+  odi_wc_bowling_economy: optionalDecimal("Enter a valid bowling economy"),
+  t20_wc_bowling_average: optionalDecimal("Enter a valid bowling average"),
+  t20_wc_bowling_economy: optionalDecimal("Enter a valid bowling economy"),
+  ct_batting_average: optionalDecimal("Enter a valid batting average"),
+  ct_strike_rate: optionalDecimal("Enter a valid strike rate", 0, 1000),
+  ct_fifties: optionalWholeNumber("Enter a valid fifties count"),
+  ct_hundreds: optionalWholeNumber("Enter a valid hundreds count"),
+  ct_highest_score: optionalWholeNumber("Enter a valid highest score"),
+  ct_wickets: optionalWholeNumber("Enter a valid wicket count"),
+  ct_bowling_strike_rate: optionalDecimal("Enter a valid bowling strike rate"),
+  ct_bowling_average: optionalDecimal("Enter a valid bowling average"),
+  ct_bowling_economy: optionalDecimal("Enter a valid bowling economy"),
+  ct_player_of_match: optionalWholeNumber("Enter a valid awards count"),
   status: Yup.string().oneOf(["active", "inactive"], "Select a status").required("Select a status"),
   photo: Yup.mixed<File>()
     .nullable()

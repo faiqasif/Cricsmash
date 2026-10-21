@@ -1,6 +1,7 @@
 import { getDocument, listDocuments } from "@/lib/firebase";
-import { nextReleaseVersion } from "@/lib/players";
+import { isReleaseVersion, nextReleaseVersion } from "@/lib/players";
 import { PlayerNotFoundError } from "@/server/players";
+import { pendingPlayerCount } from "@/server/player-version";
 
 const CHANGES = "playerChanges";
 const CATALOG = "playerCatalog";
@@ -107,7 +108,14 @@ export async function listPlayerVersions() {
       return summary ? [summary] : [];
     })
     .sort((left, right) => (left.created_at < right.created_at ? 1 : left.created_at > right.created_at ? -1 : 0));
-  return { items, next_version: await nextPlayerVersion() };
+  const catalog = await getDocument(CATALOG, "current");
+  const current = releaseLabel(catalog?.data.release_version);
+  return {
+    items,
+    current_version: current && isReleaseVersion(current) ? current : "",
+    next_version: nextReleaseVersion(current && isReleaseVersion(current) ? current : null),
+    pending_count: await pendingPlayerCount(),
+  };
 }
 
 export async function getPlayerVersion(id: string): Promise<PlayerVersionDetail> {

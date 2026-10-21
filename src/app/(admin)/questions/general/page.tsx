@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { ConfirmDeleteModal, openConfirm } from "@/components/ui/confirm-delete-modal";
+import { GeneralQuestionImport } from "@/components/questions/general-question-import";
 import { QuestionsTable } from "@/components/questions/questions-table";
 import { api } from "@/lib/api";
 import type { Category, CategoryListResponse, Question, QuestionListResponse } from "@/lib/questions";
@@ -83,6 +84,7 @@ export default function GeneralQuestionsPage() {
         basePath="/questions/general"
         showCategoryFilter={false}
         showUsed
+        toolbarExtra={<GeneralQuestionImport onSaved={() => load(true)} />}
         onQueryChange={(value) => {
           setQuery(value);
           setPage(1);

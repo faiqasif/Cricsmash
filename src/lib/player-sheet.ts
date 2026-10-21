@@ -1,5 +1,6 @@
-import { COUNTRIES } from "@/data/cricket";
+import { COUNTRIES, customAppliesToForRole } from "@/data/cricket";
 import { isReleaseVersion, type FormatStats, type PlayerCustomField, type PlayerPayload } from "@/lib/players";
+import { showsBatting, showsBowling, showsHundreds, showsKeeping, showsWickets } from "@/validation/player";
 
 export type SheetKind = "text" | "number" | "date" | "bool" | "role" | "status" | "hand" | "country" | "custom";
 
@@ -16,6 +17,7 @@ export type SheetColumn = {
   fieldId?: string;
   fieldName?: string;
   career?: keyof PlayerPayload;
+  audience?: string;
 };
 
 const FORMAT_STATS: { stat: keyof FormatStats; label: string; kind: "text" | "number"; example: string }[] = [
@@ -61,13 +63,15 @@ function career(
   return { key, label, group: "Profile", required, hint, example, kind, career: key };
 }
 
-export function playerColumns(customFields: Pick<PlayerCustomField, "id" | "name">[] = []): SheetColumn[] {
+export function playerColumns(
+  customFields: (Pick<PlayerCustomField, "id" | "name"> & { applies_to?: PlayerCustomField["applies_to"] })[] = [],
+  role?: TemplateRole,
+): SheetColumn[] {
   const profile: SheetColumn[] = [
     career("name", "Player name", "text", "At least 2 characters.", "Virat Kohli", true),
     career("country", "Country", "country", "Pick a country from the list.", "India", true),
     career("role", "Role", "role", "batsman, bowler, all-rounder, or wicketkeeper. Batter is accepted as batsman.", "batsman", true),
     career("status", "Status", "status", "active or inactive. Leave blank for active.", "active"),
-    career("release_version", "Version", "text", "Shared version such as 1.1. Many players can use the same value.", "1.1"),
     career("date_of_birth", "Date of birth", "date", "YYYY-MM-DD.", "1988-11-05"),
     career("playing_hand", "Playing hand", "hand", "righty or lefty.", "righty"),
     career("photo_url", "Photo URL", "text", "Optional image link.", ""),
@@ -93,12 +97,33 @@ export function playerColumns(customFields: Pick<PlayerCustomField, "id" | "name
     career("batting_avg_vs_australia_odi", "ODI batting average vs Australia", "number", "Number.", "46"),
     career("batting_avg_vs_england_odi", "ODI batting average vs England", "number", "Number.", "44"),
     career("batting_avg_vs_south_africa_odi", "ODI batting average vs South Africa", "number", "Number.", "41"),
+    career("batting_avg_vs_pakistan_t20", "T20 batting average vs Pakistan", "number", "Number.", "42"),
+    career("batting_avg_vs_india_t20", "T20 batting average vs India", "number", "Number.", "48"),
+    career("batting_avg_vs_australia_t20", "T20 batting average vs Australia", "number", "Number.", "39"),
+    career("batting_avg_vs_england_t20", "T20 batting average vs England", "number", "Number.", "44"),
+    career("batting_avg_vs_south_africa_t20", "T20 batting average vs South Africa", "number", "Number.", "36"),
+    career("batting_sr_vs_pakistan_t20", "T20 batting strike rate vs Pakistan", "number", "Number.", "141"),
+    career("batting_sr_vs_india_t20", "T20 batting strike rate vs India", "number", "Number.", "148"),
+    career("batting_sr_vs_australia_t20", "T20 batting strike rate vs Australia", "number", "Number.", "136"),
+    career("batting_sr_vs_england_t20", "T20 batting strike rate vs England", "number", "Number.", "139"),
+    career("batting_sr_vs_south_africa_t20", "T20 batting strike rate vs South Africa", "number", "Number.", "132"),
     career("wickets_home_test", "Test wickets at home", "number", "Whole number.", "80"),
     career("wickets_away_test", "Test wickets away", "number", "Whole number.", "60"),
-    career("wickets_vs_india", "Wickets vs India", "number", "Whole number.", "20"),
-    career("wickets_vs_australia", "Wickets vs Australia", "number", "Whole number.", "18"),
-    career("wickets_vs_england", "Wickets vs England", "number", "Whole number.", "15"),
-    career("wickets_vs_south_africa", "Wickets vs South Africa", "number", "Whole number.", "12"),
+    career("wickets_vs_pakistan", "Test wickets vs Pakistan", "number", "Whole number.", "22"),
+    career("wickets_vs_india", "Test wickets vs India", "number", "Whole number.", "20"),
+    career("wickets_vs_australia", "Test wickets vs Australia", "number", "Whole number.", "18"),
+    career("wickets_vs_england", "Test wickets vs England", "number", "Whole number.", "15"),
+    career("wickets_vs_south_africa", "Test wickets vs South Africa", "number", "Whole number.", "12"),
+    career("wickets_vs_pakistan_odi", "ODI wickets vs Pakistan", "number", "Whole number.", "18"),
+    career("wickets_vs_india_odi", "ODI wickets vs India", "number", "Whole number.", "16"),
+    career("wickets_vs_australia_odi", "ODI wickets vs Australia", "number", "Whole number.", "14"),
+    career("wickets_vs_england_odi", "ODI wickets vs England", "number", "Whole number.", "12"),
+    career("wickets_vs_south_africa_odi", "ODI wickets vs South Africa", "number", "Whole number.", "10"),
+    career("wickets_vs_pakistan_t20", "T20 wickets vs Pakistan", "number", "Whole number.", "8"),
+    career("wickets_vs_india_t20", "T20 wickets vs India", "number", "Whole number.", "7"),
+    career("wickets_vs_australia_t20", "T20 wickets vs Australia", "number", "Whole number.", "6"),
+    career("wickets_vs_england_t20", "T20 wickets vs England", "number", "Whole number.", "5"),
+    career("wickets_vs_south_africa_t20", "T20 wickets vs South Africa", "number", "Whole number.", "4"),
     career("wickets_in_india", "Wickets in India", "number", "Whole number.", "22"),
     career("wickets_in_australia", "Wickets in Australia", "number", "Whole number.", "14"),
     career("wickets_in_england", "Wickets in England", "number", "Whole number.", "11"),
@@ -124,32 +149,30 @@ export function playerColumns(customFields: Pick<PlayerCustomField, "id" | "name
     career("odi_wc_fifties", "ODI World Cup fifties", "number", "Whole number.", "4"),
     career("odi_wc_player_of_match", "ODI World Cup player of the match", "number", "Whole number.", "3"),
     career("odi_wc_highest_score", "ODI World Cup highest score", "number", "Whole number.", "183"),
-    career("odi_wc_final_batting_average", "ODI World Cup final batting average", "number", "Number.", "62.5"),
-    career("odi_wc_final_hundreds", "ODI World Cup final hundreds", "number", "Whole number.", "1"),
-    career("odi_wc_final_fifties", "ODI World Cup final fifties", "number", "Whole number.", "1"),
-    career("odi_wc_final_highest_score", "ODI World Cup final highest score", "number", "Whole number.", "140"),
-    career("odi_wc_semi_batting_average", "ODI World Cup semifinal batting average", "number", "Number.", "55"),
-    career("odi_wc_semi_hundreds", "ODI World Cup semifinal hundreds", "number", "Whole number.", "1"),
-    career("odi_wc_semi_fifties", "ODI World Cup semifinal fifties", "number", "Whole number.", "1"),
-    career("odi_wc_semi_highest_score", "ODI World Cup semifinal highest score", "number", "Whole number.", "113"),
     career("odi_wc_wickets", "ODI World Cup wickets", "number", "Whole number.", "8"),
     career("odi_wc_bowling_strike_rate", "ODI World Cup bowling strike rate", "number", "Number.", "32.5"),
+    career("odi_wc_bowling_average", "ODI World Cup bowling average", "number", "Number.", "24.5"),
+    career("odi_wc_bowling_economy", "ODI World Cup bowling economy", "number", "Number.", "4.6"),
     career("t20_wc_batting_average", "T20 World Cup batting average", "number", "Number.", "41.2"),
     career("t20_wc_strike_rate", "T20 World Cup strike rate", "number", "Number.", "131.4"),
     career("t20_wc_hundreds", "T20 World Cup hundreds", "number", "Whole number.", "0"),
     career("t20_wc_fifties", "T20 World Cup fifties", "number", "Whole number.", "2"),
     career("t20_wc_player_of_match", "T20 World Cup player of the match", "number", "Whole number.", "1"),
     career("t20_wc_highest_score", "T20 World Cup highest score", "number", "Whole number.", "82"),
-    career("t20_wc_final_batting_average", "T20 World Cup final batting average", "number", "Number.", "48"),
-    career("t20_wc_final_strike_rate", "T20 World Cup final strike rate", "number", "Number.", "150"),
-    career("t20_wc_final_fifties", "T20 World Cup final fifties", "number", "Whole number.", "1"),
-    career("t20_wc_final_highest_score", "T20 World Cup final highest score", "number", "Whole number.", "89"),
-    career("t20_wc_semi_batting_average", "T20 World Cup semifinal batting average", "number", "Number.", "36"),
-    career("t20_wc_semi_strike_rate", "T20 World Cup semifinal strike rate", "number", "Number.", "142"),
-    career("t20_wc_semi_fifties", "T20 World Cup semifinal fifties", "number", "Whole number.", "1"),
-    career("t20_wc_semi_highest_score", "T20 World Cup semifinal highest score", "number", "Whole number.", "74"),
     career("t20_wc_wickets", "T20 World Cup wickets", "number", "Whole number.", "4"),
     career("t20_wc_bowling_strike_rate", "T20 World Cup bowling strike rate", "number", "Number.", "18.2"),
+    career("t20_wc_bowling_average", "T20 World Cup bowling average", "number", "Number.", "18.4"),
+    career("t20_wc_bowling_economy", "T20 World Cup bowling economy", "number", "Number.", "6.8"),
+    career("ct_batting_average", "Champions Trophy batting average", "number", "Number.", "52.1"),
+    career("ct_strike_rate", "Champions Trophy batting strike rate", "number", "Number.", "91.4"),
+    career("ct_fifties", "Champions Trophy fifties", "number", "Whole number.", "3"),
+    career("ct_hundreds", "Champions Trophy hundreds", "number", "Whole number.", "1"),
+    career("ct_highest_score", "Champions Trophy highest score", "number", "Whole number.", "122"),
+    career("ct_wickets", "Champions Trophy wickets", "number", "Whole number.", "6"),
+    career("ct_bowling_strike_rate", "Champions Trophy bowling strike rate", "number", "Number.", "28.2"),
+    career("ct_bowling_average", "Champions Trophy bowling average", "number", "Number.", "22.4"),
+    career("ct_bowling_economy", "Champions Trophy bowling economy", "number", "Number.", "4.8"),
+    career("ct_player_of_match", "Champions Trophy player of the match", "number", "Whole number.", "1"),
   ];
 
   const formats = FORMATS.flatMap((format) =>
@@ -178,10 +201,82 @@ export function playerColumns(customFields: Pick<PlayerCustomField, "id" | "name
       format: format.key,
       fieldId: field.id,
       fieldName: field.name,
+      audience: field.applies_to,
     })),
   );
 
-  return [...profile, ...formats, ...custom];
+  const columns = [...profile, ...formats, ...custom];
+  return role ? columns.filter((column) => columnVisible(column, role)) : columns;
+}
+
+export type TemplateRole = "batsman" | "bowler" | "all-rounder" | "wicketkeeper";
+
+function columnAudience(column: SheetColumn) {
+  if (column.audience) return column.audience;
+  if (column.stat === "catches" || column.stat === "stumpings") return "keeping";
+  if (column.stat === "wickets") return "wickets";
+  if (column.stat === "hundreds") return "hundreds";
+  if (
+    column.stat === "bowling_average" ||
+    column.stat === "bowling_strike_rate" ||
+    column.stat === "bowling_economy" ||
+    column.stat === "wicket_hauls" ||
+    column.stat === "best_bowling_figures"
+  ) {
+    return "bowling";
+  }
+  if (
+    column.stat === "runs" ||
+    column.stat === "most_hundreds_against" ||
+    column.stat === "batting_average" ||
+    column.stat === "batting_strike_rate" ||
+    column.stat === "fifties" ||
+    column.stat === "highest_score" ||
+    column.stat === "sixes" ||
+    column.stat === "batting_position"
+  ) {
+    return "batting";
+  }
+  const key = String(column.career ?? "");
+  if (key === "catches") return "keeping";
+  if (key === "most_dismissed_batter") return "bowling";
+  if (key.startsWith("most_dismissals")) return "batting";
+  if (
+    key.startsWith("batting_") ||
+    key.startsWith("hundreds_") ||
+    key === "balls_played_test" ||
+    key === "ct_batting_average" ||
+    key === "ct_strike_rate" ||
+    key === "ct_fifties" ||
+    key === "ct_hundreds" ||
+    key === "ct_highest_score" ||
+    /^(?:odi|t20)_wc_(?:batting|strike|hundreds|fifties|highest)/.test(key)
+  ) {
+    return "batting";
+  }
+  if (
+    key.startsWith("wickets_") ||
+    key.startsWith("ct_bowling") ||
+    key === "ct_wickets" ||
+    key === "ct_player_of_match" ||
+    /^(?:odi|t20)_wc_(?:wickets|bowling)/.test(key)
+  ) {
+    return "bowling";
+  }
+  return "all";
+}
+
+function columnVisible(column: SheetColumn, role: string) {
+  const audience = columnAudience(column);
+  if (audience === "batting") return showsBatting(role);
+  if (audience === "bowling") return showsBowling(role);
+  if (audience === "keeping") return showsKeeping(role);
+  if (audience === "hundreds") return showsHundreds(role);
+  if (audience === "wickets") return showsWickets(role);
+  if (audience === "batter" || audience === "bowler" || audience === "all-rounder" || audience === "wicketkeeper") {
+    return customAppliesToForRole(role) === audience;
+  }
+  return true;
 }
 
 export type ParsedPlayerRow = {

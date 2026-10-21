@@ -31,9 +31,9 @@ function readDrafts(): Draft[] {
   }
 }
 
-async function loadNextVersion() {
-  const data = await api<{ next_version: string }>("/api/v1/player-versions");
-  return data.next_version || "1.0";
+async function loadVersions() {
+  const data = await api<{ current_version?: string; next_version: string }>("/api/v1/player-versions");
+  return { current: data.current_version || "", next: data.next_version || "1.00" };
 }
 
 export default function BulkPlayerUpdatePage() {
@@ -45,7 +45,8 @@ export default function BulkPlayerUpdatePage() {
   const [draftsReady, setDraftsReady] = useState(false);
   const [editing, setEditing] = useState<Player | null>(null);
   const [loadingPlayer, setLoadingPlayer] = useState(false);
-  const [nextVersion, setNextVersion] = useState("1.0");
+  const [currentVersion, setCurrentVersion] = useState("");
+  const [nextVersion, setNextVersion] = useState("1.00");
   const [publishing, setPublishing] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
@@ -87,12 +88,16 @@ export default function BulkPlayerUpdatePage() {
 
   useEffect(() => {
     let active = true;
-    void loadNextVersion()
+    void loadVersions()
       .then((value) => {
-        if (active) setNextVersion(value);
+        if (!active) return;
+        setCurrentVersion(value.current);
+        setNextVersion(value.next);
       })
       .catch(() => {
-        if (active) setNextVersion("1.0");
+        if (!active) return;
+        setCurrentVersion("");
+        setNextVersion("1.00");
       });
     return () => {
       active = false;
@@ -146,9 +151,10 @@ export default function BulkPlayerUpdatePage() {
         }),
       });
       setDrafts([]);
-      const upcoming = await loadNextVersion().catch(() => nextVersion);
-      setNextVersion(upcoming);
-      setNotice(`Published ${result.count} player${result.count === 1 ? "" : "s"} as ${result.release_version}.`);
+      const upcoming = await loadVersions().catch(() => ({ current: result.release_version, next: nextVersion }));
+      setCurrentVersion(upcoming.current);
+      setNextVersion(upcoming.next);
+      setNotice(`Created version ${result.release_version} with ${result.count} player${result.count === 1 ? "" : "s"}.`);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Could not publish this release.");
     } finally {
@@ -171,7 +177,7 @@ export default function BulkPlayerUpdatePage() {
           <div>
             <h1 className="text-[28px] font-semibold tracking-tight text-white sm:text-[32px]">Bulk update</h1>
             <p className="mt-1 text-sm text-zinc-500">
-              Update the players first. Publishing assigns version {nextVersion} automatically.
+              Current version {currentVersion || "none yet"}. Next version {nextVersion}.
             </p>
           </div>
         </div>
@@ -244,16 +250,19 @@ export default function BulkPlayerUpdatePage() {
             </div>
 
             <p className="mt-5 text-sm text-zinc-300">
+              Current version <span className="font-medium text-white">{currentVersion || "None yet"}</span>
+            </p>
+            <p className="mt-1 text-sm text-zinc-300">
               Next version <span className="font-medium text-white">{nextVersion}</span>
             </p>
-            <p className="mt-2 text-xs text-zinc-500">Versions start at 1.0 and increase by 0.1 on each publish.</p>
+            <p className="mt-2 text-xs text-zinc-500">Versions start at 1.00 and increase by 0.01. This also publishes every other player change that is waiting, including new players.</p>
             <button
               type="button"
               onClick={() => void publish()}
               disabled={publishing || drafts.length === 0}
               className="mt-4 inline-flex h-12 w-full items-center justify-center rounded-full bg-purple px-6 text-sm font-medium text-white disabled:opacity-60"
             >
-              {publishing ? "Publishing…" : "Publish release"}
+              {publishing ? "Creating…" : "Create new version"}
             </button>
             <Link href="/players" className="mt-3 block text-center text-sm text-zinc-400 hover:text-white">
               Back to players
@@ -267,7 +276,7 @@ export default function BulkPlayerUpdatePage() {
             <div className="rounded-[28px] bg-[#14141a] px-6 py-16 text-center">
               <p className="text-lg font-medium text-white">Choose a player to update</p>
               <p className="mt-2 text-sm text-zinc-500">
-                Keep each player for the release. Nothing is published until you publish version {nextVersion}.
+                Keep each player for the release. Creating the version saves them and publishes every change waiting since {currentVersion || "the start"}.
               </p>
             </div>
           ) : null}

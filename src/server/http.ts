@@ -13,7 +13,7 @@ export function empty() {
 }
 
 export function errorResponse(err: unknown) {
-  if (err instanceof Error && err.name === "PlayerInputError") {
+  if (err instanceof Error && (err.name === "PlayerInputError" || err.name === "PlayerVersionError")) {
     return fail(400, "invalid_input", err.message);
   }
   if (err instanceof Error && err.name === "PlayerNotFoundError") {

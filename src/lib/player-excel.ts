@@ -1,6 +1,6 @@
 import { COUNTRIES } from "@/data/cricket";
 import type { PlayerCustomField } from "@/lib/players";
-import { parsePlayerRows, playerColumns, type ParsedPlayerRow, type SheetColumn } from "@/lib/player-sheet";
+import { parsePlayerRows, playerColumns, type ParsedPlayerRow, type SheetColumn, type TemplateRole } from "@/lib/player-sheet";
 
 const PLAYERS_SHEET = "Players";
 
@@ -13,9 +13,11 @@ function columnList(column: SheetColumn) {
   return "";
 }
 
-export async function buildPlayerWorkbook(customFields: Pick<PlayerCustomField, "id" | "name">[] = []) {
+export async function buildPlayerWorkbook(customFields: PlayerCustomField[] = [], role?: TemplateRole) {
   const ExcelJS = (await import("exceljs")).default;
-  const columns = playerColumns(customFields);
+  const columns = playerColumns(customFields, role).map((column) =>
+    role && column.key === "role" ? { ...column, example: role } : column,
+  );
   const workbook = new ExcelJS.Workbook();
   workbook.creator = "CricSmash";
   workbook.created = new Date();
@@ -81,14 +83,21 @@ export async function buildPlayerWorkbook(customFields: Pick<PlayerCustomField, 
   return workbook;
 }
 
-export async function downloadPlayerTemplate(customFields: Pick<PlayerCustomField, "id" | "name">[] = []) {
-  const workbook = await buildPlayerWorkbook(customFields);
+const TEMPLATE_FILES: Record<TemplateRole, string> = {
+  batsman: "player-import-batter.xlsx",
+  bowler: "player-import-bowler.xlsx",
+  "all-rounder": "player-import-all-rounder.xlsx",
+  wicketkeeper: "player-import-wicketkeeper.xlsx",
+};
+
+export async function downloadPlayerTemplate(customFields: PlayerCustomField[] = [], role: TemplateRole) {
+  const workbook = await buildPlayerWorkbook(customFields, role);
   const buffer = await workbook.xlsx.writeBuffer();
   const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
-  link.download = "player-import-template.xlsx";
+  link.download = TEMPLATE_FILES[role];
   link.click();
   URL.revokeObjectURL(url);
 }

@@ -1,6 +1,6 @@
 import { rankByName } from "@/lib/fuzzy";
 import { deleteDocument, getDocument, listDocuments, queryDocuments, setDocument } from "@/lib/firebase";
-import { commitPlayerWrites } from "@/server/player-version";
+import { commitPlayerWrites, PlayerVersionError, publishQueuedVersion } from "@/server/player-version";
 import { isReleaseVersion } from "@/lib/players";
 import type {
   FormatStats,
@@ -60,9 +60,30 @@ const NUMBER_KEYS = [
   "batting_avg_vs_australia_odi",
   "batting_avg_vs_england_odi",
   "batting_avg_vs_south_africa_odi",
+  "batting_avg_vs_pakistan_t20",
+  "batting_avg_vs_india_t20",
+  "batting_avg_vs_australia_t20",
+  "batting_avg_vs_england_t20",
+  "batting_avg_vs_south_africa_t20",
+  "batting_sr_vs_pakistan_t20",
+  "batting_sr_vs_india_t20",
+  "batting_sr_vs_australia_t20",
+  "batting_sr_vs_england_t20",
+  "batting_sr_vs_south_africa_t20",
   "wickets_home_test",
   "wickets_away_test",
+  "wickets_vs_pakistan",
   "wickets_vs_india",
+  "wickets_vs_pakistan_odi",
+  "wickets_vs_india_odi",
+  "wickets_vs_australia_odi",
+  "wickets_vs_england_odi",
+  "wickets_vs_south_africa_odi",
+  "wickets_vs_pakistan_t20",
+  "wickets_vs_india_t20",
+  "wickets_vs_australia_t20",
+  "wickets_vs_england_t20",
+  "wickets_vs_south_africa_t20",
   "wickets_vs_australia",
   "wickets_vs_england",
   "wickets_vs_south_africa",
@@ -117,6 +138,20 @@ const NUMBER_KEYS = [
   "t20_wc_semi_highest_score",
   "t20_wc_wickets",
   "t20_wc_bowling_strike_rate",
+  "odi_wc_bowling_average",
+  "odi_wc_bowling_economy",
+  "t20_wc_bowling_average",
+  "t20_wc_bowling_economy",
+  "ct_batting_average",
+  "ct_strike_rate",
+  "ct_fifties",
+  "ct_hundreds",
+  "ct_highest_score",
+  "ct_wickets",
+  "ct_bowling_strike_rate",
+  "ct_bowling_average",
+  "ct_bowling_economy",
+  "ct_player_of_match",
 ] as const satisfies readonly (keyof PlayerPayload)[];
 
 export class PlayerInputError extends Error {
@@ -398,7 +433,27 @@ function toStored(payload: PlayerPayload, createdAt: string, updatedAt: string) 
   }
   if (!showsKeeping(role)) drop.push("catches");
   for (const key of drop) delete data[key];
-  if (typeof data.release_version !== "string" || !data.release_version) delete data.release_version;
+  for (const key of [
+    "release_version",
+    "odi_wc_final_batting_average",
+    "odi_wc_final_hundreds",
+    "odi_wc_final_fifties",
+    "odi_wc_final_highest_score",
+    "odi_wc_semi_batting_average",
+    "odi_wc_semi_hundreds",
+    "odi_wc_semi_fifties",
+    "odi_wc_semi_highest_score",
+    "t20_wc_final_batting_average",
+    "t20_wc_final_strike_rate",
+    "t20_wc_final_fifties",
+    "t20_wc_final_highest_score",
+    "t20_wc_semi_batting_average",
+    "t20_wc_semi_strike_rate",
+    "t20_wc_semi_fifties",
+    "t20_wc_semi_highest_score",
+  ]) {
+    delete data[key];
+  }
   return data;
 }
 
@@ -558,25 +613,28 @@ export async function publishPlayerRelease(value: unknown) {
     seen.add(id);
     parsed.push({ id, payload: parsePlayerPayload(record) });
   }
-  const published = await commitPlayerWrites(
-    async ({ now, get }) => {
-      const writes: { id: string; op: "upsert"; previous: Record<string, unknown>; data: Record<string, unknown> }[] = [];
-      for (const item of parsed) {
-        const existing = await get(PLAYERS, item.id);
-        if (!existing) throw new PlayerNotFoundError(`${item.payload.name} was not found`);
-        const createdAt = typeof existing.data.created_at === "string" ? existing.data.created_at : now;
-        writes.push({
-          id: item.id,
-          op: "upsert",
-          previous: existing.data,
-          data: toStored(item.payload, createdAt, now),
-        });
-      }
-      return writes;
-    },
-    { autoRelease: true },
-  );
-  return { release_version: published.releaseVersion, count: parsed.length };
+  await commitPlayerWrites(async ({ now, get }) => {
+    const writes: { id: string; op: "upsert"; previous: Record<string, unknown>; data: Record<string, unknown> }[] = [];
+    for (const item of parsed) {
+      const existing = await get(PLAYERS, item.id);
+      if (!existing) throw new PlayerNotFoundError(`${item.payload.name} was not found`);
+      const createdAt = typeof existing.data.created_at === "string" ? existing.data.created_at : now;
+      writes.push({
+        id: item.id,
+        op: "upsert",
+        previous: existing.data,
+        data: toStored(item.payload, createdAt, now),
+      });
+    }
+    return writes;
+  });
+  try {
+    const published = await publishQueuedVersion();
+    return { release_version: published.release_version, count: published.count };
+  } catch (err) {
+    if (err instanceof PlayerVersionError) throw new PlayerInputError(err.message);
+    throw err;
+  }
 }
 
 export async function updatePlayer(id: string, payload: PlayerPayload) {

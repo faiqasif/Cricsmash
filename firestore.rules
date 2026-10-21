@@ -138,7 +138,7 @@ service cloud.firestore {
       return value is string
         && value.size() > 0
         && value.size() <= 20
-        && value.matches('^(?:0|[1-9][0-9]*)(?:[.](?:0|[1-9][0-9]*)){0,3}$');
+        && value.matches('^(?:0|[1-9][0-9]*)(?:[.][0-9]{1,2})?$');
     }
 
     function isValidPlayerCatalog(data) {
@@ -169,12 +169,26 @@ service cloud.firestore {
         && isReleaseVersion(data.release_version)
         && data.players is list
         && data.players.size() > 0
-        && data.players.size() <= 50
+        && data.players.size() <= 300
         && data.created_at is string;
     }
 
     function isValidPlayerChange(data) {
       return isSinglePlayerChange(data) || isBulkPlayerChange(data);
+    }
+
+    function isValidPlayerPending(data) {
+      return data.keys().hasOnly(['player_id', 'op', 'fields', 'removed', 'created', 'updated_at'])
+        && data.player_id is string
+        && data.player_id.size() > 0
+        && data.player_id.size() <= 80
+        && data.op in ['upsert', 'delete']
+        && data.fields is map
+        && data.fields.keys().size() <= 160
+        && data.removed is list
+        && data.removed.size() <= 120
+        && data.created is bool
+        && data.updated_at is string;
     }
 
     function isValidPlayerOfTheDay(data) {
@@ -290,6 +304,12 @@ service cloud.firestore {
       allow get, list: if isSignedIn();
       allow create, update: if isSignedIn() && isValidPlayerChange(request.resource.data);
       allow delete: if false;
+    }
+
+    match /playerPending/{playerId} {
+      allow get, list: if isSignedIn();
+      allow create, update: if isSignedIn() && isValidPlayerPending(request.resource.data);
+      allow delete: if isSignedIn();
     }
 
     match /playersOfTheDay/{dayId} {
