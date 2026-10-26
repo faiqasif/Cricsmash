@@ -2,7 +2,7 @@ import { deleteDocument, getDocument, listDocuments, setDocument } from "@/lib/f
 import type { PlayerDayFormat, PlayerOfTheDay, PlayerOfTheDayListResponse, PlayerOfTheDayStatus } from "@/lib/player-of-the-day";
 import { getPlayer } from "@/server/players";
 
-const COLLECTION = "playersOfTheDay";
+const COLLECTION = "playerOfTheDay";
 const STATUSES = ["pending", "active", "past"] as const;
 const ROLES = ["batsman", "bowler", "all-rounder", "wicketkeeper"] as const;
 const FORMATS = ["odi", "t20", "test"] as const;

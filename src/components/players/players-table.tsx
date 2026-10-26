@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { ChevronDown, Menu, Pencil, Plus, Search, Trash2 } from "lucide-react";
+import { ChevronDown, Menu, Plus, Search, Trash2 } from "lucide-react";
 import { HeaderActions } from "@/components/layout/header-actions";
 import { useOpenMenu } from "@/components/layout/admin-shell";
 import { TablePagination } from "@/components/ui/table-pagination";
@@ -206,13 +206,6 @@ export function PlayersTable({
                   </td>
                   <td className="px-5 py-4">
                     <div className="flex items-center gap-3">
-                      <Link
-                        href={`/players/${player.id}/edit`}
-                        className="text-zinc-400 transition hover:text-white"
-                        aria-label={`Edit ${player.name}`}
-                      >
-                        <Pencil className="size-4" />
-                      </Link>
                       <button
                         type="button"
                         onClick={() => onDelete(player)}

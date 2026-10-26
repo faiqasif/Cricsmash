@@ -87,7 +87,7 @@
       ]
     },
     {
-      "collectionGroup": "teamsOfTheDay",
+      "collectionGroup": "teamOfTheDay",
       "queryScope": "COLLECTION",
       "fields": [
         { "fieldPath": "status", "order": "ASCENDING" },
@@ -95,7 +95,7 @@
       ]
     },
     {
-      "collectionGroup": "teamsOfTheDay",
+      "collectionGroup": "teamOfTheDay",
       "queryScope": "COLLECTION",
       "fields": [
         { "fieldPath": "team_type", "order": "ASCENDING" },
@@ -103,7 +103,7 @@
       ]
     },
     {
-      "collectionGroup": "teamsOfTheDay",
+      "collectionGroup": "teamOfTheDay",
       "queryScope": "COLLECTION",
       "fields": [
         { "fieldPath": "team_type", "order": "ASCENDING" },

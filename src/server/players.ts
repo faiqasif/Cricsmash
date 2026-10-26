@@ -451,6 +451,7 @@ function toStored(payload: PlayerPayload, createdAt: string, updatedAt: string) 
     "t20_wc_semi_strike_rate",
     "t20_wc_semi_fifties",
     "t20_wc_semi_highest_score",
+    "ct_player_of_match",
   ]) {
     delete data[key];
   }

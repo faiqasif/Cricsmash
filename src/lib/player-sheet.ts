@@ -172,7 +172,6 @@ export function playerColumns(
     career("ct_bowling_strike_rate", "Champions Trophy bowling strike rate", "number", "Number.", "28.2"),
     career("ct_bowling_average", "Champions Trophy bowling average", "number", "Number.", "22.4"),
     career("ct_bowling_economy", "Champions Trophy bowling economy", "number", "Number.", "4.8"),
-    career("ct_player_of_match", "Champions Trophy player of the match", "number", "Whole number.", "1"),
   ];
 
   const formats = FORMATS.flatMap((format) =>
@@ -258,7 +257,6 @@ function columnAudience(column: SheetColumn) {
     key.startsWith("wickets_") ||
     key.startsWith("ct_bowling") ||
     key === "ct_wickets" ||
-    key === "ct_player_of_match" ||
     /^(?:odi|t20)_wc_(?:wickets|bowling)/.test(key)
   ) {
     return "bowling";

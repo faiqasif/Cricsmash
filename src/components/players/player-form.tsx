@@ -901,7 +901,6 @@ export function PlayerForm({ player, onBatchSave, onBatchClose }: PlayerFormProp
                 { name: "ct_bowling_strike_rate", label: "Bowling strike rate" },
                 { name: "ct_bowling_average", label: "Bowling average" },
                 { name: "ct_bowling_economy", label: "Bowling economy" },
-                { name: "ct_player_of_match", label: "Player of the Match awards" },
               ]}
               values={formik.values}
               fieldError={fieldError}

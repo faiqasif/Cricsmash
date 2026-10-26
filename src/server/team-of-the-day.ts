@@ -2,7 +2,7 @@ import { deleteDocument, getDocument, listDocuments, queryDocuments, setDocument
 import type { TeamOfTheDay, TeamOfTheDayListResponse, TeamOfTheDayStatus, TeamOfTheDayType } from "@/lib/team-of-the-day";
 import { countryFromTeamTitle } from "@/data/cricket";
 
-const COLLECTION = "teamsOfTheDay";
+const COLLECTION = "teamOfTheDay";
 const TYPES = ["team", "squad"] as const;
 const STATUSES = ["pending", "active", "past"] as const;
 const COUNTS: Record<TeamOfTheDayType, number> = { team: 11, squad: 15 };

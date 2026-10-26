@@ -282,7 +282,7 @@ export const BATTING_EXTRA_FLOAT_KEYS = [
   "ct_strike_rate",
 ] as const;
 
-export const BOWLING_WC_INT_KEYS = ["odi_wc_wickets", "t20_wc_wickets", "ct_wickets", "ct_player_of_match"] as const;
+export const BOWLING_WC_INT_KEYS = ["odi_wc_wickets", "t20_wc_wickets", "ct_wickets"] as const;
 export const BOWLING_WC_FLOAT_KEYS = [
   "odi_wc_bowling_strike_rate",
   "t20_wc_bowling_strike_rate",
