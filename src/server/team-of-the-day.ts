@@ -254,6 +254,12 @@ export async function listTeams(input: {
   };
 }
 
+export async function findTeamByDate(playDate: string) {
+  const teams = await Promise.all((await allTeams()).map((team) => refreshPast(team)));
+  const match = teams.find((team) => team.play_date === playDate);
+  return match ? toResponse(match, true) : null;
+}
+
 export async function getTeam(id: string) {
   const snap = await getDocument(COLLECTION, id);
   if (!snap) throw new TeamNotFoundError();

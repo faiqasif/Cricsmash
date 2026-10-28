@@ -86,9 +86,23 @@ export async function sendGameNotification(input: {
   gameTitle: string;
   playDate: string;
   gameOption: string;
+  gameData: Record<string, unknown>;
 }) {
   const account = serviceAccount();
   const token = await accessToken(account);
+  const data = {
+    type: "game",
+    game: input.game,
+    game_title: input.gameTitle,
+    play_date: input.playDate,
+    game_option: input.gameOption,
+    title: input.title,
+    body: input.body,
+    game_data: JSON.stringify(input.gameData),
+  };
+  if (Buffer.byteLength(JSON.stringify(data), "utf8") > 3500) {
+    throw new Error("This game is too large to include in a notification. Shorten the quiz and send again.");
+  }
   const response = await fetch(`https://fcm.googleapis.com/v1/projects/${account.project_id}/messages:send`, {
     method: "POST",
     headers: {
@@ -102,15 +116,7 @@ export async function sendGameNotification(input: {
           title: input.title,
           body: input.body,
         },
-        data: {
-          type: "game",
-          game: input.game,
-          game_title: input.gameTitle,
-          play_date: input.playDate,
-          game_option: input.gameOption,
-          title: input.title,
-          body: input.body,
-        },
+        data,
         android: { priority: "HIGH" },
         apns: { payload: { aps: { sound: "default" } } },
       },

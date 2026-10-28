@@ -1,9 +1,9 @@
 import { GAME_CARDS } from "@/data/games";
 import { listDocuments, setDocument } from "@/lib/firebase";
-import { listDailyQuizzes } from "@/server/daily-quiz";
+import { findDailyQuizByDate } from "@/server/daily-quiz";
 import { notificationTopic, sendGameNotification } from "@/server/fcm";
-import { listPlayerDays } from "@/server/player-of-the-day";
-import { listTeams } from "@/server/team-of-the-day";
+import { findPlayerDayByDate } from "@/server/player-of-the-day";
+import { findTeamByDate } from "@/server/team-of-the-day";
 
 const COLLECTION = "notifications";
 
@@ -40,26 +40,79 @@ function isDateKey(value: string) {
   return date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 && date.getUTCDate() === day;
 }
 
-async function scheduledOption(game: string, playDate: string, gameTitle: string) {
+function quizForNotification(quiz: NonNullable<Awaited<ReturnType<typeof findDailyQuizByDate>>>) {
+  return {
+    id: quiz.id,
+    quiz_date: quiz.quiz_date,
+    status: quiz.status,
+    items: quiz.items.map((item) => ({
+      id: item.id,
+      title: item.title,
+      format: item.format,
+      metric: item.metric ?? "",
+      kind: item.kind ?? "",
+      category_name: item.category_name ?? "",
+      country: item.country ?? "",
+      options: item.options.map((option) => ({
+        player_id: option.player_id,
+        name: option.name,
+        country: option.country,
+        photo_url: option.photo_url ?? "",
+        option: option.option ?? 0,
+        correct: option.correct === true,
+      })),
+    })),
+  };
+}
+
+async function scheduledGame(game: string, playDate: string, gameTitle: string) {
   if (game === "daily-quiz") {
-    const list = await listDailyQuizzes({ status: "", from: playDate, to: playDate, page: 1, pageSize: 5 });
-    const match = list.items.find((item) => item.quiz_date === playDate);
+    const match = await findDailyQuizByDate(playDate);
     if (!match) throw new NotificationInputError(`No Daily Quiz is scheduled for ${playDate}.`);
-    return `${match.question_count} question${match.question_count === 1 ? "" : "s"}`;
+    const count = match.items.length;
+    return {
+      option: `${count} question${count === 1 ? "" : "s"}`,
+      data: quizForNotification(match),
+    };
   }
   if (game === "player-of-the-day") {
-    const list = await listPlayerDays({ q: "", status: "", from: playDate, to: playDate, page: 1, pageSize: 5 });
-    const match = list.items.find((item) => item.play_date === playDate);
+    const match = await findPlayerDayByDate(playDate);
     if (!match) throw new NotificationInputError(`No Player of the day is scheduled for ${playDate}.`);
-    return `${match.name} · ${match.country}`;
+    return {
+      option: `${match.name} · ${match.country}`,
+      data: {
+        id: match.id,
+        play_date: match.play_date,
+        player_id: match.player_id,
+        name: match.name,
+        country: match.country,
+        photo_url: match.photo_url ?? "",
+        role: match.role,
+        debut_format: match.debut_format,
+        wickets_format: match.wickets_format,
+        matches_format: match.matches_format,
+        hundreds_format: match.hundreds_format,
+        status: match.status,
+      },
+    };
   }
   if (game === "team-of-the-day") {
-    const list = await listTeams({ q: "", teamType: "", status: "", from: playDate, to: playDate, page: 1, pageSize: 5 });
-    const match = list.items.find((item) => item.play_date === playDate);
+    const match = await findTeamByDate(playDate);
     if (!match) throw new NotificationInputError(`No Team of the day is scheduled for ${playDate}.`);
-    return `${match.title} · ${match.country}`;
+    return {
+      option: `${match.title} · ${match.country}`,
+      data: {
+        id: match.id,
+        play_date: match.play_date,
+        title: match.title,
+        country: match.country,
+        team_type: match.team_type,
+        status: match.status,
+        players: match.players ?? [],
+      },
+    };
   }
-  return gameTitle;
+  return { option: gameTitle, data: { slug: game, play_date: playDate } };
 }
 
 export async function parseNotificationPayload(value: unknown) {
@@ -73,8 +126,16 @@ export async function parseNotificationPayload(value: unknown) {
   if (!isDateKey(playDate)) throw new NotificationInputError("Choose a game date.");
   if (title.length < 1 || title.length > 120) throw new NotificationInputError("Title must be between 1 and 120 characters.");
   if (message.length < 1 || message.length > 500) throw new NotificationInputError("Message must be between 1 and 500 characters.");
-  const gameOption = await scheduledOption(match.slug, playDate, match.title);
-  return { title, body: message, game: match.slug, gameTitle: match.title, playDate, gameOption };
+  const scheduled = await scheduledGame(match.slug, playDate, match.title);
+  return {
+    title,
+    body: message,
+    game: match.slug,
+    gameTitle: match.title,
+    playDate,
+    gameOption: scheduled.option,
+    gameData: scheduled.data,
+  };
 }
 
 function readNotification(id: string, data: Record<string, unknown>): GameNotification {

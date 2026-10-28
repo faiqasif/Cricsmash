@@ -248,6 +248,12 @@ export async function listPlayerDays(input: {
   };
 }
 
+export async function findPlayerDayByDate(playDate: string) {
+  const days = await Promise.all((await allDays()).map((day) => refreshPast(day)));
+  const match = days.find((day) => day.play_date === playDate);
+  return match ? toResponse(match) : null;
+}
+
 export async function getPlayerDay(id: string) {
   const snap = await getDocument(COLLECTION, id);
   if (!snap) throw new PlayerDayNotFoundError();

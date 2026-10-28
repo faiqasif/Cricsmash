@@ -180,6 +180,12 @@ export async function listDailyQuizzes(input: {
   };
 }
 
+export async function findDailyQuizByDate(playDate: string) {
+  const quizzes = await Promise.all((await allQuizzes()).map((quiz) => refreshPast(quiz)));
+  const match = quizzes.find((quiz) => quiz.quiz_date === playDate);
+  return match ? toQuiz(match) : null;
+}
+
 export async function getDailyQuiz(id: string) {
   const snap = await getDocument(COLLECTION, id);
   if (!snap) throw new CatalogNotFoundError("Daily quiz not found.");
