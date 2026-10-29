@@ -79,7 +79,9 @@ async function accessToken(account: ServiceAccount) {
   return body.access_token;
 }
 
-export async function sendGameNotification(input: {
+const MESSAGE_LIMIT = 3800;
+
+type GameMessageInput = {
   title: string;
   body: string;
   game: string;
@@ -87,10 +89,10 @@ export async function sendGameNotification(input: {
   playDate: string;
   gameOption: string;
   gameData: Record<string, unknown>;
-}) {
-  const account = serviceAccount();
-  const token = await accessToken(account);
-  const data = {
+};
+
+function messageData(input: GameMessageInput) {
+  return {
     type: "game",
     game: input.game,
     game_title: input.gameTitle,
@@ -100,9 +102,24 @@ export async function sendGameNotification(input: {
     body: input.body,
     game_data: JSON.stringify(input.gameData),
   };
-  if (Buffer.byteLength(JSON.stringify(data), "utf8") > 3500) {
+}
+
+export function gameMessageFits(input: GameMessageInput) {
+  const data = messageData(input);
+  let bytes = Buffer.byteLength(input.title, "utf8") + Buffer.byteLength(input.body, "utf8");
+  for (const [key, value] of Object.entries(data)) {
+    bytes += Buffer.byteLength(key, "utf8") + Buffer.byteLength(value, "utf8");
+  }
+  return bytes <= MESSAGE_LIMIT;
+}
+
+export async function sendGameNotification(input: GameMessageInput) {
+  if (!gameMessageFits(input)) {
     throw new Error("This game is too large to include in a notification. Shorten the quiz and send again.");
   }
+  const account = serviceAccount();
+  const token = await accessToken(account);
+  const data = messageData(input);
   const response = await fetch(`https://fcm.googleapis.com/v1/projects/${account.project_id}/messages:send`, {
     method: "POST",
     headers: {

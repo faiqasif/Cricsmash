@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
+  Bell,
   ChevronDown,
   Eye,
   Menu,
@@ -10,6 +11,7 @@ import {
   Plus,
   Trash2,
 } from "lucide-react";
+import { SendGameNotificationModal } from "@/components/games/send-game-notification-modal";
 import { HeaderActions } from "@/components/layout/header-actions";
 import { useOpenMenu } from "@/components/layout/admin-shell";
 import { ConfirmDeleteModal, openConfirm } from "@/components/ui/confirm-delete-modal";
@@ -46,6 +48,8 @@ export default function DailyQuizListPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [pendingDelete, setPendingDelete] = useState<DailyQuizListItem | null>(null);
+  const [pendingNotify, setPendingNotify] = useState<DailyQuizListItem | null>(null);
+  const [notice, setNotice] = useState("");
   const pageSize = 10;
 
   const load = useCallback(async () => {
@@ -141,6 +145,11 @@ export default function DailyQuizListPage() {
       {error ? (
         <p className="mt-5 rounded-2xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">
           {error}
+        </p>
+      ) : null}
+      {notice ? (
+        <p className="mt-5 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-300">
+          {notice}
         </p>
       ) : null}
 
@@ -239,6 +248,17 @@ export default function DailyQuizListPage() {
                     <td className="px-6 py-4 text-zinc-300">{padIndex(item.times_played)}</td>
                     <td className="px-6 py-4">
                       <div className="flex justify-end gap-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setNotice("");
+                            openConfirm(setPendingNotify, item);
+                          }}
+                          className="rounded-full p-2 text-zinc-400 hover:bg-white/5 hover:text-white"
+                          aria-label={`Send notification for ${date.label}`}
+                        >
+                          <Bell className="size-4" />
+                        </button>
                         <Link
                           href={`/games/daily-quiz/${item.id}`}
                           className="rounded-full p-2 text-zinc-400 hover:bg-white/5 hover:text-white"
@@ -280,6 +300,22 @@ export default function DailyQuizListPage() {
         </div>
       ) : null}
 
+      <SendGameNotificationModal
+        open={Boolean(pendingNotify)}
+        game="daily-quiz"
+        gameTitle="Daily Quiz"
+        playDate={pendingNotify?.quiz_date ?? ""}
+        dateLabel={pendingNotify ? formatQuizDate(pendingNotify.quiz_date).label : ""}
+        detail={pendingNotify ? `${pendingNotify.question_count} questions` : ""}
+        onClose={() => setPendingNotify(null)}
+        onSent={() =>
+          setNotice(
+            pendingNotify
+              ? `Notification sent for ${formatQuizDate(pendingNotify.quiz_date).label}.`
+              : "Notification sent.",
+          )
+        }
+      />
       <ConfirmDeleteModal
         open={Boolean(pendingDelete)}
         title="Delete quiz?"

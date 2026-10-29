@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ChevronDown, Menu, Pencil, Plus, Search, Trash2 } from "lucide-react";
+import { Bell, ChevronDown, Menu, Pencil, Plus, Search, Trash2 } from "lucide-react";
+import { SendGameNotificationModal } from "@/components/games/send-game-notification-modal";
 import { HeaderActions } from "@/components/layout/header-actions";
 import { useOpenMenu } from "@/components/layout/admin-shell";
 import { ConfirmDeleteModal, openConfirm } from "@/components/ui/confirm-delete-modal";
@@ -51,6 +52,8 @@ export default function PlayerOfTheDayListPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [pendingDelete, setPendingDelete] = useState<PlayerOfTheDay | null>(null);
+  const [pendingNotify, setPendingNotify] = useState<PlayerOfTheDay | null>(null);
+  const [notice, setNotice] = useState("");
   const pageSize = 10;
 
   const load = useCallback(async () => {
@@ -145,6 +148,11 @@ export default function PlayerOfTheDayListPage() {
 
       {error ? (
         <p className="mt-5 rounded-2xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">{error}</p>
+      ) : null}
+      {notice ? (
+        <p className="mt-5 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-300">
+          {notice}
+        </p>
       ) : null}
 
       <div className="mt-5 flex flex-col gap-3 lg:flex-row">
@@ -276,6 +284,17 @@ export default function PlayerOfTheDayListPage() {
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex justify-end gap-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setNotice("");
+                            openConfirm(setPendingNotify, item);
+                          }}
+                          className="rounded-full p-2 text-zinc-400 hover:bg-white/5 hover:text-white"
+                          aria-label={`Send notification for ${item.name}`}
+                        >
+                          <Bell className="size-4" />
+                        </button>
                         <Link
                           href={`/games/player-of-the-day/${item.id}/edit`}
                           className="rounded-full p-2 text-zinc-400 hover:bg-white/5 hover:text-white"
@@ -310,6 +329,18 @@ export default function PlayerOfTheDayListPage() {
         </div>
       ) : null}
 
+      <SendGameNotificationModal
+        open={Boolean(pendingNotify)}
+        game="player-of-the-day"
+        gameTitle="Player of the day"
+        playDate={pendingNotify?.play_date ?? ""}
+        dateLabel={pendingNotify ? formatPlayDate(pendingNotify.play_date).label : ""}
+        detail={pendingNotify ? `${pendingNotify.name} · ${pendingNotify.country}` : ""}
+        onClose={() => setPendingNotify(null)}
+        onSent={() =>
+          setNotice(pendingNotify ? `Notification sent for ${pendingNotify.name}.` : "Notification sent.")
+        }
+      />
       <ConfirmDeleteModal
         open={Boolean(pendingDelete)}
         title="Delete player of the day?"

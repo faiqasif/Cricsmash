@@ -1,7 +1,7 @@
 import { GAME_CARDS } from "@/data/games";
 import { listDocuments, setDocument } from "@/lib/firebase";
 import { findDailyQuizByDate } from "@/server/daily-quiz";
-import { notificationTopic, sendGameNotification } from "@/server/fcm";
+import { gameMessageFits, notificationTopic, sendGameNotification } from "@/server/fcm";
 import { findPlayerDayByDate } from "@/server/player-of-the-day";
 import { findTeamByDate } from "@/server/team-of-the-day";
 
@@ -40,39 +40,58 @@ function isDateKey(value: string) {
   return date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 && date.getUTCDate() === day;
 }
 
-function quizForNotification(quiz: NonNullable<Awaited<ReturnType<typeof findDailyQuizByDate>>>) {
+type StoredQuiz = NonNullable<Awaited<ReturnType<typeof findDailyQuizByDate>>>;
+
+function quizForNotification(quiz: StoredQuiz, includePlayerId: boolean, includeItemId: boolean) {
   return {
     id: quiz.id,
     quiz_date: quiz.quiz_date,
-    status: quiz.status,
-    items: quiz.items.map((item) => ({
-      id: item.id,
-      title: item.title,
-      format: item.format,
-      metric: item.metric ?? "",
-      kind: item.kind ?? "",
-      category_name: item.category_name ?? "",
-      country: item.country ?? "",
-      options: item.options.map((option) => ({
-        player_id: option.player_id,
-        name: option.name,
-        country: option.country,
-        photo_url: option.photo_url ?? "",
-        option: option.option ?? 0,
-        correct: option.correct === true,
-      })),
-    })),
+    items: quiz.items.map((item) => {
+      const row: Record<string, unknown> = {
+        title: item.title,
+        options: item.options.map((option) => {
+          const choice: Record<string, unknown> = {
+            name: option.name,
+            option: option.option ?? 0,
+          };
+          if (option.correct === true) choice.correct = true;
+          if (includePlayerId && option.player_id) choice.player_id = option.player_id;
+          return choice;
+        }),
+      };
+      if (includeItemId) row.id = item.id;
+      return row;
+    }),
   };
 }
 
-async function scheduledGame(game: string, playDate: string, gameTitle: string) {
+function quizThatFits(
+  quiz: StoredQuiz,
+  envelope: { title: string; body: string; game: string; gameTitle: string; playDate: string; gameOption: string },
+) {
+  const candidates = [
+    quizForNotification(quiz, true, true),
+    quizForNotification(quiz, false, true),
+    quizForNotification(quiz, false, false),
+  ];
+  return candidates.find((data) => gameMessageFits({ ...envelope, gameData: data })) ?? candidates[candidates.length - 1];
+}
+
+async function scheduledGame(
+  game: string,
+  playDate: string,
+  gameTitle: string,
+  title: string,
+  body: string,
+) {
   if (game === "daily-quiz") {
     const match = await findDailyQuizByDate(playDate);
     if (!match) throw new NotificationInputError(`No Daily Quiz is scheduled for ${playDate}.`);
     const count = match.items.length;
+    const option = `${count} question${count === 1 ? "" : "s"}`;
     return {
-      option: `${count} question${count === 1 ? "" : "s"}`,
-      data: quizForNotification(match),
+      option,
+      data: quizThatFits(match, { title, body, game, gameTitle, playDate, gameOption: option }),
     };
   }
   if (game === "player-of-the-day") {
@@ -126,7 +145,7 @@ export async function parseNotificationPayload(value: unknown) {
   if (!isDateKey(playDate)) throw new NotificationInputError("Choose a game date.");
   if (title.length < 1 || title.length > 120) throw new NotificationInputError("Title must be between 1 and 120 characters.");
   if (message.length < 1 || message.length > 500) throw new NotificationInputError("Message must be between 1 and 500 characters.");
-  const scheduled = await scheduledGame(match.slug, playDate, match.title);
+  const scheduled = await scheduledGame(match.slug, playDate, match.title, title, message);
   return {
     title,
     body: message,

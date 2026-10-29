@@ -4,7 +4,6 @@ import {
   FolderOpen,
   Gamepad2,
   HelpCircle,
-  Bell,
   LayoutDashboard,
   LayoutGrid,
   LogOut,
@@ -38,7 +37,6 @@ export const navItems: NavItem[] = [
   },
   { label: "General Questions", href: "/questions/general", icon: FileQuestion },
   { label: "Games", href: "/games", icon: Gamepad2 },
-  { label: "Notifications", href: "/notifications", icon: Bell },
   { label: "Settings", href: "/settings", icon: Settings },
 ];
 
