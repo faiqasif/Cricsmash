@@ -18,12 +18,19 @@ function isActivePath(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
+function activeHref(pathname: string, items: NavItem[]) {
+  return items
+    .filter((item) => isActivePath(pathname, item.href))
+    .sort((left, right) => right.href.length - left.href.length)[0]?.href;
+}
+
 export function Sidebar({ open, onClose }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const { logout } = useAuth();
   const mainItems = navItems.filter((item) => item.href !== "/settings");
   const settingsItem = navItems.find((item) => item.href === "/settings");
+  const selectedHref = activeHref(pathname, navItems);
 
   return (
     <>
@@ -64,7 +71,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
             <NavLink
               key={item.href}
               item={item}
-              active={isActivePath(pathname, item.href)}
+              active={item.href === selectedHref}
               onClick={onClose}
             />
           ))}
@@ -74,7 +81,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
           {settingsItem ? (
             <NavLink
               item={settingsItem}
-              active={isActivePath(pathname, settingsItem.href)}
+              active={settingsItem.href === selectedHref}
               onClick={onClose}
             />
           ) : null}

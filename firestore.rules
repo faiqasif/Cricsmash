@@ -163,14 +163,35 @@ service cloud.firestore {
     }
 
     function isBulkPlayerChange(data) {
-      return data.keys().hasOnly(['version', 'release_version', 'players', 'created_at'])
+      return data.keys().hasOnly(['version', 'release_version', 'players', 'stat_questions', 'created_at'])
         && data.version is int
         && data.version > 0
         && isReleaseVersion(data.release_version)
         && data.players is list
-        && data.players.size() > 0
         && data.players.size() <= 300
-        && data.created_at is string;
+        && data.created_at is string
+        && (!data.keys().hasAny(['stat_questions']) || (data.stat_questions is list && data.stat_questions.size() <= 150))
+        && (data.players.size() > 0 || (data.keys().hasAny(['stat_questions']) && data.stat_questions.size() > 0));
+    }
+
+    function isValidGuessPlayerStat(data) {
+      return data.keys().hasOnly(['question', 'answer', 'created_at', 'updated_at'])
+        && isString(data.question, 4, 500)
+        && isString(data.answer, 1, 120)
+        && data.created_at is string
+        && data.updated_at is string;
+    }
+
+    function isValidGuessPlayerStatPending(data) {
+      return data.keys().hasOnly(['question_id', 'op', 'question', 'answer', 'created', 'updated_at'])
+        && isString(data.question_id, 1, 80)
+        && data.op in ['upsert', 'delete']
+        && data.question is string
+        && data.question.size() <= 500
+        && data.answer is string
+        && data.answer.size() <= 120
+        && data.created is bool
+        && data.updated_at is string;
     }
 
     function isValidPlayerChange(data) {
@@ -304,6 +325,20 @@ service cloud.firestore {
       allow get, list: if isSignedIn();
       allow create, update: if isSignedIn() && isValidPlayerChange(request.resource.data);
       allow delete: if false;
+    }
+
+    match /guessPlayerStats/{questionId} {
+      allow get, list: if isSignedIn();
+      allow create: if isSignedIn() && isValidGuessPlayerStat(request.resource.data);
+      allow update: if isSignedIn() && isValidGuessPlayerStat(request.resource.data)
+        && request.resource.data.created_at == resource.data.created_at;
+      allow delete: if isSignedIn();
+    }
+
+    match /guessPlayerStatsPending/{questionId} {
+      allow get, list: if isSignedIn();
+      allow create, update: if isSignedIn() && isValidGuessPlayerStatPending(request.resource.data);
+      allow delete: if isSignedIn();
     }
 
     match /playerPending/{playerId} {

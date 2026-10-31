@@ -11,6 +11,7 @@ import {
   Settings,
   Trophy,
   Hash,
+  Target,
   UserRound,
   Users,
 } from "lucide-react";
@@ -37,6 +38,7 @@ export const navItems: NavItem[] = [
   },
   { label: "General Questions", href: "/questions/general", icon: FileQuestion },
   { label: "Games", href: "/games", icon: Gamepad2 },
+  { label: "Guess the Player Stats", href: "/games/guess-player-stats", icon: Target },
   { label: "Settings", href: "/settings", icon: Settings },
 ];
 

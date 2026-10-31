@@ -37,6 +37,13 @@ export const GAME_CARDS: GameCard[] = [
     image: "/games/fake-or-real.png",
   },
   {
+    slug: "guess-player-stats",
+    title: "Guess the Player Stats",
+    description: "Write a question and the correct stat. Phones keep a local copy.",
+    href: "/games/guess-player-stats",
+    image: "/games/quiz.jpg",
+  },
+  {
     slug: "team-of-the-day",
     title: "Team of the day",
     description: "Build the team and prove you know your cricket.",

@@ -12,6 +12,13 @@ type VersionDetail = {
   release_version: string;
   created_at: string;
   player_count: number;
+  question_count?: number;
+  stat_questions?: {
+    question_id: string;
+    op: "upsert" | "delete";
+    question: string;
+    answer: string;
+  }[];
   players: {
     player_id: string;
     name: string;
@@ -69,8 +76,8 @@ export default function PlayerVersionDetailPage() {
             </h1>
             <p className="mt-1 text-sm text-zinc-500">
               {version
-                ? `${version.player_count} player${version.player_count === 1 ? "" : "s"} · ${formatWhen(version.created_at)}`
-                : "Players and fields updated in this release."}
+                ? `${version.player_count} player${version.player_count === 1 ? "" : "s"} · ${version.question_count ?? 0} stat question${version.question_count === 1 ? "" : "s"} · ${formatWhen(version.created_at)}`
+                : "Players and Guess the Player Stats questions in this release."}
             </p>
           </div>
         </div>
@@ -84,6 +91,21 @@ export default function PlayerVersionDetailPage() {
 
       {version ? (
         <div className="mt-5 space-y-4">
+          {(version.stat_questions ?? []).map((question) => (
+            <section key={question.question_id} className="overflow-hidden rounded-[28px] bg-card">
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/8 px-5 py-4">
+                <h2 className="text-lg font-medium text-white">{question.op === "delete" ? "Deleted question" : question.question}</h2>
+                {question.op === "delete" ? (
+                  <span className="rounded-full bg-red-500/15 px-3 py-1 text-xs font-medium text-red-300">Deleted</span>
+                ) : (
+                  <span className="rounded-full bg-purple/20 px-3 py-1 text-xs font-medium text-purple">Stat question</span>
+                )}
+              </div>
+              <p className="px-5 py-4 text-sm text-zinc-300">
+                {question.op === "delete" ? "Phones remove this question." : `Correct answer: ${question.answer}`}
+              </p>
+            </section>
+          ))}
           {version.players.map((player) => (
             <section key={player.player_id} className="overflow-hidden rounded-[28px] bg-card">
               <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/8 px-5 py-4">
