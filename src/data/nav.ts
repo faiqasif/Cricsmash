@@ -11,6 +11,7 @@ import {
   Settings,
   Trophy,
   Hash,
+  ListOrdered,
   Target,
   UserRound,
   Users,
@@ -39,6 +40,7 @@ export const navItems: NavItem[] = [
   { label: "General Questions", href: "/questions/general", icon: FileQuestion },
   { label: "Games", href: "/games", icon: Gamepad2 },
   { label: "Guess the Player Stats", href: "/games/guess-player-stats", icon: Target },
+  { label: "Stat Version Numbers", href: "/guess-stat-versions", icon: ListOrdered },
   { label: "Settings", href: "/settings", icon: Settings },
 ];
 

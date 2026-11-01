@@ -12,7 +12,6 @@ type VersionRow = {
   release_version: string;
   created_at: string;
   player_count: number;
-  question_count?: number;
 };
 
 type VersionList = {
@@ -20,8 +19,6 @@ type VersionList = {
   current_version?: string;
   next_version: string;
   pending_count?: number;
-  pending_players?: number;
-  pending_questions?: number;
 };
 
 function formatWhen(value: string) {
@@ -36,8 +33,6 @@ export default function PlayerVersionsPage() {
   const [currentVersion, setCurrentVersion] = useState("");
   const [nextVersion, setNextVersion] = useState("");
   const [pendingCount, setPendingCount] = useState(0);
-  const [pendingPlayers, setPendingPlayers] = useState(0);
-  const [pendingQuestions, setPendingQuestions] = useState(0);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState("");
@@ -50,8 +45,6 @@ export default function PlayerVersionsPage() {
     setCurrentVersion(data.current_version || "");
     setNextVersion(data.next_version);
     setPendingCount(data.pending_count ?? 0);
-    setPendingPlayers(data.pending_players ?? data.pending_count ?? 0);
-    setPendingQuestions(data.pending_questions ?? 0);
   }
 
   useEffect(() => {
@@ -76,17 +69,13 @@ export default function PlayerVersionsPage() {
     setError("");
     setNotice("");
     try {
-      const created = await api<{ release_version: string; count: number; question_count?: number }>("/api/v1/player-versions", {
+      const created = await api<{ release_version: string; count: number }>("/api/v1/player-versions", {
         method: "POST",
       });
       const data = await api<VersionList>("/api/v1/player-versions");
       applyList(data);
       setPage(1);
-      const players = `${created.count} player${created.count === 1 ? "" : "s"}`;
-      const questions = created.question_count
-        ? `${created.question_count} stat question${created.question_count === 1 ? "" : "s"}`
-        : "";
-      setNotice(`Created version ${created.release_version} with ${questions ? `${players} and ${questions}` : players}.`);
+      setNotice(`Created version ${created.release_version} with ${created.count} player${created.count === 1 ? "" : "s"}.`);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Could not create the version.");
     } finally {
@@ -137,8 +126,8 @@ export default function PlayerVersionsPage() {
 
       <p className="mt-4 text-sm text-zinc-500">
         {pendingCount === 0
-          ? "No changes are waiting. Player saves and Guess the Player Stats questions stay here until you create a version."
-          : `${pendingPlayers} player${pendingPlayers === 1 ? "" : "s"} and ${pendingQuestions} stat question${pendingQuestions === 1 ? "" : "s"} will be included in ${nextVersion || "the next version"}.`}
+          ? "No player changes are waiting. Saves update the players immediately and stay here until you create a version."
+          : `${pendingCount} player${pendingCount === 1 ? "" : "s"} will be included in ${nextVersion || "the next version"}. New players are included too.`}
       </p>
 
       {notice ? (
@@ -155,7 +144,6 @@ export default function PlayerVersionsPage() {
             <tr className="bg-[#16122A] text-xs font-medium uppercase tracking-wide text-zinc-400">
               <th className="px-5 py-4 font-medium">Version</th>
               <th className="px-5 py-4 font-medium">Players</th>
-              <th className="px-5 py-4 font-medium">Stat questions</th>
               <th className="px-5 py-4 font-medium">Created</th>
               <th className="px-5 py-4 font-medium">Details</th>
             </tr>
@@ -163,13 +151,13 @@ export default function PlayerVersionsPage() {
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={5} className="px-5 py-12 text-center text-sm text-zinc-500">
+                <td colSpan={4} className="px-5 py-12 text-center text-sm text-zinc-500">
                   Loading versions...
                 </td>
               </tr>
             ) : items.length === 0 ? (
               <tr>
-                <td colSpan={5} className="px-5 py-12 text-center text-sm text-zinc-500">
+                <td colSpan={4} className="px-5 py-12 text-center text-sm text-zinc-500">
                   No versions yet. The first version will be 1.00.
                 </td>
               </tr>
@@ -178,7 +166,6 @@ export default function PlayerVersionsPage() {
                 <tr key={item.id} className="border-b border-border last:border-0">
                   <td className="px-5 py-4 text-sm font-medium text-white">{item.release_version}</td>
                   <td className="px-5 py-4 text-sm text-zinc-300">{item.player_count}</td>
-                  <td className="px-5 py-4 text-sm text-zinc-300">{item.question_count ?? 0}</td>
                   <td className="px-5 py-4 text-sm text-zinc-300">{formatWhen(item.created_at)}</td>
                   <td className="px-5 py-4">
                     <Link href={`/player-versions/${item.id}`} className="text-sm font-medium text-purple hover:text-white">

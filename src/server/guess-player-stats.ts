@@ -81,6 +81,46 @@ export async function pendingStatQuestionCount() {
   return (await listPendingStatQuestions()).length;
 }
 
+function wholeNumber(value: unknown, fallback: number) {
+  return typeof value === "number" && Number.isInteger(value) && value >= 0 ? value : fallback;
+}
+
+export async function publishQueuedStatVersion() {
+  const questions = await listPendingStatQuestions();
+  if (!questions.length) throw new GuessStatInputError("No stat questions are waiting for a version.");
+  if (questions.length > 150) throw new GuessStatInputError("Create a version before more than 150 stat questions are waiting.");
+  const now = new Date().toISOString();
+  const catalog = await getDocument("playerCatalog", "current");
+  const nextVersion = wholeNumber(catalog?.data.guess_the_stat_version_number, 0) + 1;
+  const playerVersion = wholeNumber(catalog?.data.version, 0);
+  const release = typeof catalog?.data.release_version === "string" ? catalog.data.release_version : "";
+  const catalogData: Record<string, unknown> = {
+    version: playerVersion,
+    player_version_number: wholeNumber(catalog?.data.player_version_number, playerVersion),
+    guess_the_stat_version_number: nextVersion,
+    updated_at: now,
+  };
+  if (release) catalogData.release_version = release;
+  const catalogWrite = replaceWrite("playerCatalog", "current", catalogData);
+  catalogWrite.currentDocument = catalog?.updateTime ? { updateTime: catalog.updateTime } : { exists: false };
+  const writes = [
+    replaceWrite("playerChanges", `stat-${nextVersion}`, {
+      guess_the_stat_version_number: nextVersion,
+      stat_questions: questions.map((item) => ({
+        question_id: item.question_id,
+        op: item.op,
+        question: item.op === "delete" ? "" : item.question,
+        answer: item.op === "delete" ? "" : item.answer,
+      })),
+      created_at: now,
+    }),
+    catalogWrite,
+    ...questions.map((item) => deleteWrite(PENDING, item.id)),
+  ];
+  await commitWrites(writes);
+  return { guess_the_stat_version_number: nextVersion, count: questions.length };
+}
+
 export async function listGuessPlayerStats(params: { q?: string; page?: number; pageSize?: number }) {
   const q = params.q?.trim().toLowerCase() ?? "";
   const pageSize = Math.min(Math.max(params.pageSize ?? 10, 1), 50);

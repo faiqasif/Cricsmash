@@ -144,7 +144,7 @@ export default function BulkPlayerUpdatePage() {
     setError("");
     setNotice("");
     try {
-      const result = await api<{ release_version: string; count: number; question_count?: number }>("/api/v1/players/release", {
+      const result = await api<{ release_version: string; count: number }>("/api/v1/players/release", {
         method: "POST",
         body: JSON.stringify({
           players: drafts.map((item) => ({ id: item.id, ...item.payload })),
@@ -154,10 +154,7 @@ export default function BulkPlayerUpdatePage() {
       const upcoming = await loadVersions().catch(() => ({ current: result.release_version, next: nextVersion }));
       setCurrentVersion(upcoming.current);
       setNextVersion(upcoming.next);
-      const questions = result.question_count
-        ? ` ${result.question_count} stat question${result.question_count === 1 ? "" : "s"} were included.`
-        : "";
-      setNotice(`Created version ${result.release_version} with ${result.count} player${result.count === 1 ? "" : "s"}.${questions}`);
+      setNotice(`Created version ${result.release_version} with ${result.count} player${result.count === 1 ? "" : "s"}.`);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Could not publish this release.");
     } finally {

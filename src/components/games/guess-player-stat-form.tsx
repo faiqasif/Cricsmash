@@ -61,7 +61,7 @@ export function GuessPlayerStatForm({
         />
       </label>
       <p className="mt-4 text-sm text-zinc-500">
-        The question is saved now. Phones receive it when you create the next version from Version Numbers.
+        The question is saved now. Phones receive it when you create the next version from Stat Version Numbers.
       </p>
       <button
         type="submit"

@@ -1,7 +1,6 @@
 import { getDocument, listDocuments } from "@/lib/firebase";
 import { isReleaseVersion, nextReleaseVersion } from "@/lib/players";
 import { PlayerNotFoundError } from "@/server/players";
-import { pendingStatQuestionCount } from "@/server/guess-player-stats";
 import { pendingPlayerCount } from "@/server/player-version";
 
 const CHANGES = "playerChanges";
@@ -9,19 +8,11 @@ const CATALOG = "playerCatalog";
 const SKIPPED = new Set(["version", "updated_at", "created_at", "release_version"]);
 const FORMATS: Record<string, string> = { odi: "ODI", t20: "T20", test: "Test" };
 
-export type PlayerVersionStatQuestion = {
-  question_id: string;
-  op: "upsert" | "delete";
-  question: string;
-  answer: string;
-};
-
 export type PlayerVersionSummary = {
   id: string;
   release_version: string;
   created_at: string;
   player_count: number;
-  question_count: number;
 };
 
 export type PlayerVersionChange = {
@@ -39,7 +30,6 @@ export type PlayerVersionPlayer = {
 
 export type PlayerVersionDetail = PlayerVersionSummary & {
   players: PlayerVersionPlayer[];
-  stat_questions: PlayerVersionStatQuestion[];
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -93,32 +83,15 @@ function readPlayers(value: unknown) {
   });
 }
 
-function readStatQuestions(value: unknown): PlayerVersionStatQuestion[] {
-  if (!Array.isArray(value)) return [];
-  return value.flatMap((item) => {
-    if (!isRecord(item) || typeof item.question_id !== "string") return [];
-    return [
-      {
-        question_id: item.question_id,
-        op: item.op === "delete" ? ("delete" as const) : ("upsert" as const),
-        question: typeof item.question === "string" ? item.question : "",
-        answer: typeof item.answer === "string" ? item.answer : "",
-      },
-    ];
-  });
-}
-
 function readSummary(id: string, data: Record<string, unknown>): PlayerVersionSummary | null {
   const release = releaseLabel(data.release_version);
   const players = readPlayers(data.players);
-  const questions = readStatQuestions(data.stat_questions);
-  if (!release || (players.length === 0 && questions.length === 0)) return null;
+  if (!release || players.length === 0) return null;
   return {
     id,
     release_version: release,
     created_at: typeof data.created_at === "string" ? data.created_at : "",
     player_count: players.length,
-    question_count: questions.length,
   };
 }
 
@@ -137,15 +110,11 @@ export async function listPlayerVersions() {
     .sort((left, right) => (left.created_at < right.created_at ? 1 : left.created_at > right.created_at ? -1 : 0));
   const catalog = await getDocument(CATALOG, "current");
   const current = releaseLabel(catalog?.data.release_version);
-  const pendingPlayers = await pendingPlayerCount();
-  const pendingQuestions = await pendingStatQuestionCount();
   return {
     items,
     current_version: current && isReleaseVersion(current) ? current : "",
     next_version: nextReleaseVersion(current && isReleaseVersion(current) ? current : null),
-    pending_count: pendingPlayers + pendingQuestions,
-    pending_players: pendingPlayers,
-    pending_questions: pendingQuestions,
+    pending_count: await pendingPlayerCount(),
   };
 }
 
@@ -173,5 +142,5 @@ export async function getPlayerVersion(id: string): Promise<PlayerVersionDetail>
       };
     }),
   );
-  return { ...summary, players, stat_questions: readStatQuestions(snap.data.stat_questions) };
+  return { ...summary, players };
 }

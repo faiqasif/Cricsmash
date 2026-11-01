@@ -631,11 +631,7 @@ export async function publishPlayerRelease(value: unknown) {
   });
   try {
     const published = await publishQueuedVersion();
-    return {
-      release_version: published.release_version,
-      count: published.count,
-      question_count: published.question_count,
-    };
+    return { release_version: published.release_version, count: published.count };
   } catch (err) {
     if (err instanceof PlayerVersionError) throw new PlayerInputError(err.message);
     throw err;

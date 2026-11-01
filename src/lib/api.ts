@@ -11,7 +11,8 @@ function usesNextApi(path: string) {
     path.startsWith("/api/v1/daily-quiz") ||
     path.startsWith("/api/v1/tournaments") ||
     path.startsWith("/api/v1/notifications") ||
-    path.startsWith("/api/v1/guess-player-stats")
+    path.startsWith("/api/v1/guess-player-stats") ||
+    path.startsWith("/api/v1/guess-stat-versions")
   );
 }
 

@@ -83,7 +83,7 @@ export default function GuessPlayerStatsPage() {
             <h1 className="text-2xl font-semibold tracking-tight text-white">Guess the Player Stats</h1>
             <p className="mt-1 text-sm text-zinc-400">Write a question and the correct answer. Phones store both locally.</p>
             <p className="mt-0.5 text-xs text-zinc-500">
-              New, edited, and deleted questions are included the next time you create a version.
+              New, edited, and deleted questions are included the next time you create a stat version.
             </p>
           </div>
         </div>
@@ -136,7 +136,7 @@ export default function GuessPlayerStatsPage() {
             ) : empty ? (
               <tr>
                 <td colSpan={4} className="px-6 py-10 text-center text-zinc-500">
-                  No questions yet. Add one, then create a version so phones can download it.
+                  No questions yet. Add one, then create a stat version so phones can download it.
                 </td>
               </tr>
             ) : (

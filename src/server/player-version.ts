@@ -1,6 +1,5 @@
 import { commitWrites, deleteWrite, getDocument, listDocuments, replaceWrite, type StoredDocument } from "@/lib/firebase";
 import { compareReleaseVersions, isReleaseVersion, nextReleaseVersion } from "@/lib/players";
-import { listPendingStatQuestions } from "@/server/guess-player-stats";
 export class PlayerVersionError extends Error {
   constructor(message: string) {
     super(message);
@@ -167,6 +166,24 @@ function pendingDelete(write: PlayerWrite, pending: StoredDocument | null, now: 
   });
 }
 
+function wholeNumber(value: unknown, fallback: number) {
+  return typeof value === "number" && Number.isInteger(value) && value >= 0 ? value : fallback;
+}
+
+function catalogRecord(
+  now: string,
+  next: { version: number; release: string | null; playerVersionNumber: number; guessStatVersion: number },
+) {
+  const data: Record<string, unknown> = {
+    version: next.version,
+    player_version_number: next.playerVersionNumber,
+    guess_the_stat_version_number: next.guessStatVersion,
+    updated_at: now,
+  };
+  if (next.release) data.release_version = next.release;
+  return data;
+}
+
 function retryable(err: unknown) {
   return (
     err instanceof Error &&
@@ -245,7 +262,12 @@ export async function commitPlayerWrites(
       const catalogWrite = replaceWrite(
         CATALOG,
         CATALOG_ID,
-        release ? { version, release_version: release, updated_at: now } : { version, updated_at: now },
+        catalogRecord(now, {
+          version,
+          release,
+          playerVersionNumber: version,
+          guessStatVersion: wholeNumber(catalog?.data.guess_the_stat_version_number, 0),
+        }),
       );
       catalogWrite.currentDocument = catalog?.updateTime ? { updateTime: catalog.updateTime } : { exists: false };
       committed.push(catalogWrite);
@@ -270,10 +292,8 @@ export async function publishQueuedVersion() {
       const now = new Date().toISOString();
       const catalog = await getDocument(CATALOG, CATALOG_ID);
       const ready = (await listDocuments(PENDING)).filter((item) => item.data.op === "upsert" || item.data.op === "delete");
-      const questions = await listPendingStatQuestions();
-      if (!ready.length && !questions.length) throw new PlayerVersionError("No changes are waiting for a version.");
+      if (!ready.length) throw new PlayerVersionError("No player changes are waiting for a version.");
       if (ready.length > 300) throw new PlayerVersionError("Create a version before more than 300 players are waiting.");
-      if (questions.length > 150) throw new PlayerVersionError("Create a version before more than 150 stat questions are waiting.");
       const release = nextReleaseVersion(releaseLabel(catalog?.data.release_version));
       const version = catalogVersion(catalog) + 1;
       const players = ready.map((item) => ({
@@ -282,32 +302,29 @@ export async function publishQueuedVersion() {
         fields: isRecord(item.data.fields) ? item.data.fields : {},
         removed: Array.isArray(item.data.removed) ? item.data.removed.filter((entry) => typeof entry === "string") : [],
       }));
-      const change: Record<string, unknown> = {
-        version,
-        release_version: release,
-        players,
-        created_at: now,
-      };
-      if (questions.length) {
-        change.stat_questions = questions.map((item) => ({
-          question_id: item.question_id,
-          op: item.op,
-          question: item.op === "delete" ? "" : item.question,
-          answer: item.op === "delete" ? "" : item.answer,
-        }));
-      }
-      const committed = [replaceWrite(CHANGES, String(version), change)];
-      const catalogWrite = replaceWrite(CATALOG, CATALOG_ID, {
-        version,
-        release_version: release,
-        updated_at: now,
-      });
+      const committed = [
+        replaceWrite(CHANGES, String(version), {
+          version,
+          release_version: release,
+          players,
+          created_at: now,
+        }),
+      ];
+      const catalogWrite = replaceWrite(
+        CATALOG,
+        CATALOG_ID,
+        catalogRecord(now, {
+          version,
+          release,
+          playerVersionNumber: version,
+          guessStatVersion: wholeNumber(catalog?.data.guess_the_stat_version_number, 0),
+        }),
+      );
       catalogWrite.currentDocument = catalog?.updateTime ? { updateTime: catalog.updateTime } : { exists: false };
       committed.push(catalogWrite);
       for (const item of ready) committed.push(deleteWrite(PENDING, item.id));
-      for (const item of questions) committed.push(deleteWrite("guessPlayerStatsPending", item.id));
       await commitWrites(committed);
-      return { version, release_version: release, count: ready.length, question_count: questions.length };
+      return { version, release_version: release, count: ready.length, player_version_number: version };
     } catch (err) {
       lastError = err;
       if (err instanceof PlayerVersionError || !retryable(err) || attempt === 4) throw err;

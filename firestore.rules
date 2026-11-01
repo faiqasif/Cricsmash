@@ -142,11 +142,13 @@ service cloud.firestore {
     }
 
     function isValidPlayerCatalog(data) {
-      return data.keys().hasOnly(['version', 'release_version', 'updated_at'])
+      return data.keys().hasOnly(['version', 'release_version', 'updated_at', 'player_version_number', 'guess_the_stat_version_number'])
         && data.version is int
         && data.version >= 0
         && data.updated_at is string
-        && (!data.keys().hasAny(['release_version']) || isReleaseVersion(data.release_version));
+        && (!data.keys().hasAny(['release_version']) || isReleaseVersion(data.release_version))
+        && (!data.keys().hasAny(['player_version_number']) || (data.player_version_number is int && data.player_version_number >= 0))
+        && (!data.keys().hasAny(['guess_the_stat_version_number']) || (data.guess_the_stat_version_number is int && data.guess_the_stat_version_number >= 0));
     }
 
     function isSinglePlayerChange(data) {
@@ -163,15 +165,24 @@ service cloud.firestore {
     }
 
     function isBulkPlayerChange(data) {
-      return data.keys().hasOnly(['version', 'release_version', 'players', 'stat_questions', 'created_at'])
+      return data.keys().hasOnly(['version', 'release_version', 'players', 'created_at'])
         && data.version is int
         && data.version > 0
         && isReleaseVersion(data.release_version)
         && data.players is list
+        && data.players.size() > 0
         && data.players.size() <= 300
-        && data.created_at is string
-        && (!data.keys().hasAny(['stat_questions']) || (data.stat_questions is list && data.stat_questions.size() <= 150))
-        && (data.players.size() > 0 || (data.keys().hasAny(['stat_questions']) && data.stat_questions.size() > 0));
+        && data.created_at is string;
+    }
+
+    function isValidGuessStatChange(data) {
+      return data.keys().hasOnly(['guess_the_stat_version_number', 'stat_questions', 'created_at'])
+        && data.guess_the_stat_version_number is int
+        && data.guess_the_stat_version_number > 0
+        && data.stat_questions is list
+        && data.stat_questions.size() > 0
+        && data.stat_questions.size() <= 150
+        && data.created_at is string;
     }
 
     function isValidGuessPlayerStat(data) {
@@ -195,7 +206,7 @@ service cloud.firestore {
     }
 
     function isValidPlayerChange(data) {
-      return isSinglePlayerChange(data) || isBulkPlayerChange(data);
+      return isSinglePlayerChange(data) || isBulkPlayerChange(data) || isValidGuessStatChange(data);
     }
 
     function isValidPlayerPending(data) {
