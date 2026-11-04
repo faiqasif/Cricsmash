@@ -44,7 +44,7 @@ export function withFirebaseUser<T>(idToken: string, run: () => Promise<T>) {
 function firebaseError(body: Json, fallback: string) {
   const raw = body.error && typeof body.error === "object" ? String((body.error as Json).message ?? "") : "";
   const message = /has not been used|SERVICE_DISABLED|Cloud Firestore API|does not exist/i.test(raw)
-    ? "Cloud Firestore is not enabled for this project. In the Firebase console, create a Firestore database for cricstreak-c7ccf, then try again."
+    ? `Cloud Firestore is not enabled for this project. In the Firebase console, create a Firestore database for ${projectId()}, then try again.`
     : raw || fallback;
   const error = new Error(message);
   error.name = "FirebaseError";
