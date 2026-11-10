@@ -10,7 +10,19 @@ type ImportResult = {
   failed: { row: number; message: string }[];
 };
 
-export function GeneralQuestionImport({ onSaved }: { onSaved: () => Promise<void> | void }) {
+export function GeneralQuestionImport({
+  onSaved,
+  type = "general",
+  categoryName = "General Questions",
+  downloadName = "general-questions-template.xlsx",
+  heading = "Import general questions",
+}: {
+  onSaved: () => Promise<void> | void;
+  type?: "general" | "recent_match" | "famous_match";
+  categoryName?: string;
+  downloadName?: string;
+  heading?: string;
+}) {
   const [open, setOpen] = useState(false);
   const [rows, setRows] = useState<GeneralQuestionRow[]>([]);
   const [fileName, setFileName] = useState("");
@@ -54,6 +66,7 @@ export function GeneralQuestionImport({ onSaved }: { onSaved: () => Promise<void
       const result = await api<ImportResult>("/api/v1/questions/import", {
         method: "POST",
         body: JSON.stringify({
+          type,
           questions: ready.map((row) => ({
             row: row.row,
             title: row.title,
@@ -90,7 +103,7 @@ export function GeneralQuestionImport({ onSaved }: { onSaved: () => Promise<void
     <>
       <button
         type="button"
-        onClick={() => void downloadGeneralQuestionTemplate()}
+        onClick={() => void downloadGeneralQuestionTemplate(categoryName, downloadName)}
         className="inline-flex h-12 shrink-0 items-center justify-center gap-2 rounded-full border border-white/10 bg-[#14141a] px-5 text-sm font-medium text-white transition hover:border-purple/50"
       >
         <Download className="size-4" />
@@ -119,7 +132,7 @@ export function GeneralQuestionImport({ onSaved }: { onSaved: () => Promise<void
       >
         <div className="px-6 py-6">
           <h2 id={titleId} className="text-xl font-semibold">
-            Import general questions
+            {heading}
           </h2>
           <p className="mt-2 text-sm text-zinc-400">
             Columns are Question Title, Option A, Option B, Option C, Option D, Correct option, Category, and Status. Status defaults to Used=No. You can import another file whenever you add more questions.

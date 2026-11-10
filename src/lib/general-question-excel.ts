@@ -51,12 +51,12 @@ function usedValue(value: string) {
   return null;
 }
 
-export async function downloadGeneralQuestionTemplate() {
+export async function downloadGeneralQuestionTemplate(categoryName = "General Questions", fileName = "general-questions-template.xlsx") {
   const ExcelJS = (await import("exceljs")).default;
   const workbook = new ExcelJS.Workbook();
   const sheet = workbook.addWorksheet("Questions");
   sheet.addRow(HEADERS);
-  sheet.addRow(["Who won the 2019 Cricket World Cup?", "England", "New Zealand", "Australia", "India", "A", "General Questions", "Used=No"]);
+  sheet.addRow(["Who won the 2019 Cricket World Cup?", "England", "New Zealand", "Australia", "India", "A", categoryName, "Used=No"]);
   sheet.getRow(1).font = { bold: true };
   sheet.columns = HEADERS.map((header) => ({ width: Math.max(18, header.length + 4) }));
   const buffer = await workbook.xlsx.writeBuffer();
@@ -64,7 +64,7 @@ export async function downloadGeneralQuestionTemplate() {
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
-  link.download = "general-questions-template.xlsx";
+  link.download = fileName;
   link.click();
   URL.revokeObjectURL(url);
 }

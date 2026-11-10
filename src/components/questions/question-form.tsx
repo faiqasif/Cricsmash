@@ -9,7 +9,7 @@ import { ErrorText } from "@/components/form/error-text";
 import { StatusCard, TournamentQuestionFields } from "@/components/questions/tournament-question-fields";
 import { PlayerQuestionTitle } from "@/components/questions/player-question-title";
 import { api, ApiError } from "@/lib/api";
-import { GENERAL_CATEGORY_NAME, isQuizTournamentCategory, tournamentQuestionCategories, type Category, type Question, type QuestionType } from "@/lib/questions";
+import { choiceQuestionSection, isQuizTournamentCategory, tournamentQuestionCategories, type Category, type Question, type QuestionType } from "@/lib/questions";
 import {
   questionInitialValues,
   questionPayloadFromValues,
@@ -34,12 +34,12 @@ type QuestionFormProps = {
 export function QuestionForm({ question, categories, type = "player" }: QuestionFormProps) {
   const router = useRouter();
   const editing = Boolean(question);
-  const isGeneral = type === "general";
+  const choiceSection = choiceQuestionSection(type);
+  const isChoice = Boolean(choiceSection);
   const isTournament = type === "tournament";
   const isPlayer = type === "player";
   const tournamentCategories = isTournament ? tournamentQuestionCategories(categories) : categories;
-  const listHref =
-    type === "general" ? "/questions/general" : type === "tournament" ? "/questions/tournament" : "/questions/player";
+  const listHref = choiceSection?.path ?? (type === "tournament" ? "/questions/tournament" : "/questions/player");
 
   const formik = useFormik<QuestionFormValues>({
     initialValues: questionInitialValues(question),
@@ -69,15 +69,17 @@ export function QuestionForm({ question, categories, type = "player" }: Question
   });
 
   useEffect(() => {
-    if (!isGeneral || formik.values.category_id) return;
+    if (!isChoice || !choiceSection || formik.values.category_id) return;
     const category =
-      categories.find((item) => item.name.toLowerCase() === GENERAL_CATEGORY_NAME.toLowerCase()) ??
-      categories.find((item) => item.name.toLowerCase() === "general knowledge");
+      categories.find((item) => item.name.toLowerCase() === choiceSection.name.toLowerCase()) ??
+      (choiceSection.type === "general"
+        ? categories.find((item) => item.name.toLowerCase() === "general knowledge")
+        : undefined);
     if (category) {
       void formik.setFieldValue("category_id", category.id, false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [categories, isGeneral, formik.values.category_id]);
+  }, [categories, isChoice, choiceSection, formik.values.category_id]);
 
   useEffect(() => {
     if (!isTournament || formik.values.category_id) return;
@@ -152,7 +154,7 @@ export function QuestionForm({ question, categories, type = "player" }: Question
                     onChange={formik.handleChange}
                     onBlur={formik.handleBlur}
                     placeholder={
-                      isGeneral
+                      isChoice
                         ? "e.g. Who won the 2023 ODI World Cup?"
                         : "e.g. Which of these players has the highest batting average (odi/test/t20) ?"
                     }
@@ -165,7 +167,7 @@ export function QuestionForm({ question, categories, type = "player" }: Question
               )}
             </div>
 
-            {isGeneral ? (
+            {isChoice ? (
               <div className="mt-8">
                 <span className={labelClass}>
                   Answer Options<span className="text-red-400">*</span>
@@ -223,13 +225,13 @@ export function QuestionForm({ question, categories, type = "player" }: Question
               <span className={labelClass}>
                 Category<span className="text-red-400">*</span>
               </span>
-              {isGeneral ? (
+              {isChoice ? (
                 <>
                   <p className="mb-3 text-sm text-zinc-500">
-                    All questions in this section are assigned to General Questions.
+                    All questions in this section are assigned to {choiceSection?.name}.
                   </p>
                   <span className="inline-flex h-12 items-center rounded-full border border-white/8 bg-[#0c0c10] px-5 text-sm text-white">
-                    {GENERAL_CATEGORY_NAME}
+                    {choiceSection?.name}
                   </span>
                 </>
               ) : (

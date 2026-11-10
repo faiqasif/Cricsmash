@@ -1,5 +1,5 @@
 import * as Yup from "yup";
-import type { Question, QuestionPayload, QuestionStatus, QuestionType } from "@/lib/questions";
+import { choiceQuestionSection, type Question, type QuestionPayload, type QuestionStatus, type QuestionType } from "@/lib/questions";
 
 export type QuestionFormValues = {
   title: string;
@@ -38,7 +38,7 @@ export function questionSchema(type: QuestionType) {
       .min(8, "Enter at least 8 characters")
       .max(500, "Must be 500 characters or fewer"),
     category_id:
-      type === "general" ? Yup.string() : Yup.string().required("Select a category"),
+      choiceQuestionSection(type) ? Yup.string() : Yup.string().required("Select a category"),
     status: Yup.string().oneOf(["active", "inactive"], "Select a status").required("Select a status"),
     option_1: Yup.string(),
     option_2: Yup.string(),
@@ -47,7 +47,7 @@ export function questionSchema(type: QuestionType) {
     correct_option: Yup.string(),
   };
 
-  if (type !== "general") {
+  if (!choiceQuestionSection(type)) {
     return Yup.object(base);
   }
 
@@ -79,7 +79,7 @@ export function questionPayloadFromValues(
     category_id: values.category_id,
     status: values.status,
   };
-  if (type === "general") {
+  if (choiceQuestionSection(type)) {
     payload.option_1 = values.option_1.trim();
     payload.option_2 = values.option_2.trim();
     payload.option_3 = values.option_3.trim();

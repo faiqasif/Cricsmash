@@ -4,8 +4,11 @@ import { resolvePlayerMetric, slotFormats } from "@/server/quiz-metrics";
 
 const CATEGORIES = "categories";
 const QUESTIONS = "questions";
-const TYPES = ["player", "general", "tournament", "image"] as const;
+const TYPES = ["player", "general", "tournament", "image", "recent_match", "famous_match"] as const;
 const GENERAL_NAME = "General Questions";
+const RECENT_NAME = "Recent Matches";
+const FAMOUS_NAME = "Famous Matches";
+const CHOICE_TYPES = new Set(["general", "recent_match", "famous_match"]);
 
 export class CatalogInputError extends Error {
   constructor(message: string) {
@@ -157,7 +160,20 @@ export async function updateCategory(id: string, value: unknown) {
     updated_at: new Date().toISOString(),
   };
   await setDocument(CATEGORIES, id, stored);
+  if (current.name !== input.name) await renameQuestionCategory(id, input.name);
   return readCategory(id, stored);
+}
+
+async function renameQuestionCategory(id: string, name: string) {
+  const now = new Date().toISOString();
+  const questions = (await allQuestions()).filter((item) => item.category_id === id && item.category_name !== name);
+  for (const question of questions) {
+    await setDocument(QUESTIONS, question.id, {
+      ...questionToStored(question),
+      category_name: name,
+      updated_at: now,
+    });
+  }
 }
 
 export async function deleteCategory(id: string) {
@@ -170,10 +186,16 @@ export async function deleteCategory(id: string) {
   await deleteDocument(CATEGORIES, id);
 }
 
-async function ensureGeneralCategory() {
-  const existing = (await allCategories()).find((item) => item.name.toLowerCase() === GENERAL_NAME.toLowerCase());
+async function ensureNamedCategory(name: string) {
+  const existing = (await allCategories()).find((item) => item.name.toLowerCase() === name.toLowerCase());
   if (existing) return existing;
-  return createCategory({ name: GENERAL_NAME, daily_question_limit: 10 });
+  return createCategory({ name, daily_question_limit: 10 });
+}
+
+function choiceCategoryName(type: string) {
+  if (type === "recent_match") return RECENT_NAME;
+  if (type === "famous_match") return FAMOUS_NAME;
+  return GENERAL_NAME;
 }
 
 function todayKey() {
@@ -190,7 +212,7 @@ function readQuestion(id: string, data: Record<string, unknown>): Question {
   const usedFormats = readFormats(data.used_formats);
   const lastUsedOn = typeof data.last_used_on === "string" ? data.last_used_on : null;
   let used = data.used === true;
-  if (type === "general") used = lastUsedOn === todayKey();
+  if (CHOICE_TYPES.has(type)) used = lastUsedOn === todayKey();
   else if (type === "player" && usedFormats) used = usedFormats.length > 0;
   return {
     id,
@@ -315,8 +337,8 @@ async function buildQuestion(value: unknown, existing?: Question): Promise<Store
   const status = typeof body.status === "string" && body.status.trim() ? body.status.trim().toLowerCase() : "active";
   if (status !== "active" && status !== "inactive") throw new CatalogInputError("Invalid status");
   let categoryId = typeof body.category_id === "string" ? body.category_id.trim() : "";
-  if (type === "general" && !categoryId) {
-    categoryId = (await ensureGeneralCategory()).id;
+  if (CHOICE_TYPES.has(type) && !categoryId) {
+    categoryId = (await ensureNamedCategory(choiceCategoryName(type))).id;
   } else if (!categoryId) {
     throw new CatalogInputError("Category is required");
   }
@@ -329,7 +351,7 @@ async function buildQuestion(value: unknown, existing?: Question): Promise<Store
   let option3: string | null = null;
   let option4: string | null = null;
   let correct: number | null = null;
-  if (type === "general") {
+  if (CHOICE_TYPES.has(type)) {
     option1 = optionText(body.option_1, 1);
     option2 = optionText(body.option_2, 2);
     option3 = optionText(body.option_3, 3);
@@ -377,6 +399,8 @@ export async function importGeneralQuestions(value: unknown) {
   }
   if (body.questions.length > 200) throw new CatalogInputError("Import up to 200 questions at a time");
   const categories = await allCategories();
+  const importType = body.type === "recent_match" || body.type === "famous_match" ? body.type : "general";
+  const sectionName = choiceCategoryName(importType);
   const saved: { row: number; id: string; title: string }[] = [];
   const failed: { row: number; message: string }[] = [];
   for (const entry of body.questions) {
@@ -387,12 +411,16 @@ export async function importGeneralQuestions(value: unknown) {
       const categoryName = typeof record.category === "string" ? record.category.trim() : "";
       let categoryId = "";
       if (categoryName) {
-        const match = categories.find((item) => item.name.toLowerCase() === categoryName.toLowerCase());
+        let match = categories.find((item) => item.name.toLowerCase() === categoryName.toLowerCase());
+        if (!match && categoryName.toLowerCase() === sectionName.toLowerCase()) {
+          match = await ensureNamedCategory(sectionName);
+          categories.push(match);
+        }
         if (!match) throw new CatalogInputError(`Category “${categoryName}” was not found`);
         categoryId = match.id;
       }
       const created = await createQuestion({
-        type: "general",
+        type: importType,
         title: record.title,
         category_id: categoryId,
         status: "active",

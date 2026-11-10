@@ -487,9 +487,9 @@ export function playerStatValue(player: Player, format: string, country: string,
     case METRIC.wicketsAwayTest:
       return asFloat(player.wickets_away_test);
     case METRIC.wicketsVsCountry:
-      return countryNumber(country, player.wickets_vs_india, player.wickets_vs_australia, player.wickets_vs_england, player.wickets_vs_south_africa);
+      return countryNumber(country, player.wickets_vs_india_test, player.wickets_vs_australia_test, player.wickets_vs_england_test, player.wickets_vs_south_africa_test);
     case METRIC.wicketsInCountry:
-      return countryNumber(country, player.wickets_in_india, player.wickets_in_australia, player.wickets_in_england, player.wickets_in_south_africa);
+      return countryNumber(country, player.wickets_in_india_test, player.wickets_in_australia_test, player.wickets_in_england_test, player.wickets_in_south_africa_test);
     case METRIC.odiWcBattingAverage:
       return asFloat(player.odi_wc_batting_average);
     case METRIC.odiWcStrikeRate:

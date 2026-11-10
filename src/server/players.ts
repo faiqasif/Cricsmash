@@ -1,7 +1,7 @@
 import { rankByName } from "@/lib/fuzzy";
 import { deleteDocument, getDocument, listDocuments, queryDocuments, setDocument } from "@/lib/firebase";
 import { commitPlayerWrites, PlayerVersionError, publishQueuedVersion } from "@/server/player-version";
-import { isReleaseVersion } from "@/lib/players";
+import { isReleaseVersion, LEGACY_TEST_WICKET_KEYS } from "@/lib/players";
 import type {
   FormatStats,
   Player,
@@ -72,8 +72,8 @@ const NUMBER_KEYS = [
   "batting_sr_vs_south_africa_t20",
   "wickets_home_test",
   "wickets_away_test",
-  "wickets_vs_pakistan",
-  "wickets_vs_india",
+  "wickets_vs_pakistan_test",
+  "wickets_vs_india_test",
   "wickets_vs_pakistan_odi",
   "wickets_vs_india_odi",
   "wickets_vs_australia_odi",
@@ -84,13 +84,13 @@ const NUMBER_KEYS = [
   "wickets_vs_australia_t20",
   "wickets_vs_england_t20",
   "wickets_vs_south_africa_t20",
-  "wickets_vs_australia",
-  "wickets_vs_england",
-  "wickets_vs_south_africa",
-  "wickets_in_india",
-  "wickets_in_australia",
-  "wickets_in_england",
-  "wickets_in_south_africa",
+  "wickets_vs_australia_test",
+  "wickets_vs_england_test",
+  "wickets_vs_south_africa_test",
+  "wickets_in_india_test",
+  "wickets_in_australia_test",
+  "wickets_in_england_test",
+  "wickets_in_south_africa_test",
   "hundreds_vs_pakistan_test",
   "hundreds_vs_india_test",
   "hundreds_vs_australia_test",
@@ -271,7 +271,11 @@ function parseCustomFields(value: unknown): PlayerCustomFieldValue[] {
 }
 
 export function parsePlayerPayload(value: unknown): PlayerPayload {
-  const body = asRecord(value, "Player body is invalid");
+  const body = { ...asRecord(value, "Player body is invalid") };
+  for (const [oldKey, newKey] of Object.entries(LEGACY_TEST_WICKET_KEYS)) {
+    if (body[newKey] == null && body[oldKey] != null) body[newKey] = body[oldKey];
+    delete body[oldKey];
+  }
   const name = text(body.name, 150, "Player name", true);
   const country = text(body.country, 80, "Country", true);
   const role = text(body.role, 40, "Role", true);
@@ -452,6 +456,7 @@ function toStored(payload: PlayerPayload, createdAt: string, updatedAt: string) 
     "t20_wc_semi_fifties",
     "t20_wc_semi_highest_score",
     "ct_player_of_match",
+    ...Object.keys(LEGACY_TEST_WICKET_KEYS),
   ]) {
     delete data[key];
   }

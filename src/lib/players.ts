@@ -72,11 +72,11 @@ export type Player = {
   batting_sr_vs_south_africa_t20: number | null;
   wickets_home_test: number | null;
   wickets_away_test: number | null;
-  wickets_vs_pakistan: number | null;
-  wickets_vs_india: number | null;
-  wickets_vs_australia: number | null;
-  wickets_vs_england: number | null;
-  wickets_vs_south_africa: number | null;
+  wickets_vs_pakistan_test: number | null;
+  wickets_vs_india_test: number | null;
+  wickets_vs_australia_test: number | null;
+  wickets_vs_england_test: number | null;
+  wickets_vs_south_africa_test: number | null;
   wickets_vs_pakistan_odi: number | null;
   wickets_vs_india_odi: number | null;
   wickets_vs_australia_odi: number | null;
@@ -87,10 +87,10 @@ export type Player = {
   wickets_vs_australia_t20: number | null;
   wickets_vs_england_t20: number | null;
   wickets_vs_south_africa_t20: number | null;
-  wickets_in_india: number | null;
-  wickets_in_australia: number | null;
-  wickets_in_england: number | null;
-  wickets_in_south_africa: number | null;
+  wickets_in_india_test: number | null;
+  wickets_in_australia_test: number | null;
+  wickets_in_england_test: number | null;
+  wickets_in_south_africa_test: number | null;
   hundreds_vs_pakistan_test: number | null;
   hundreds_vs_india_test: number | null;
   hundreds_vs_australia_test: number | null;
@@ -254,11 +254,11 @@ export type PlayerPayload = {
   batting_sr_vs_south_africa_t20?: number | null;
   wickets_home_test?: number | null;
   wickets_away_test?: number | null;
-  wickets_vs_pakistan?: number | null;
-  wickets_vs_india?: number | null;
-  wickets_vs_australia?: number | null;
-  wickets_vs_england?: number | null;
-  wickets_vs_south_africa?: number | null;
+  wickets_vs_pakistan_test?: number | null;
+  wickets_vs_india_test?: number | null;
+  wickets_vs_australia_test?: number | null;
+  wickets_vs_england_test?: number | null;
+  wickets_vs_south_africa_test?: number | null;
   wickets_vs_pakistan_odi?: number | null;
   wickets_vs_india_odi?: number | null;
   wickets_vs_australia_odi?: number | null;
@@ -269,10 +269,10 @@ export type PlayerPayload = {
   wickets_vs_australia_t20?: number | null;
   wickets_vs_england_t20?: number | null;
   wickets_vs_south_africa_t20?: number | null;
-  wickets_in_india?: number | null;
-  wickets_in_australia?: number | null;
-  wickets_in_england?: number | null;
-  wickets_in_south_africa?: number | null;
+  wickets_in_india_test?: number | null;
+  wickets_in_australia_test?: number | null;
+  wickets_in_england_test?: number | null;
+  wickets_in_south_africa_test?: number | null;
   hundreds_vs_pakistan_test?: number | null;
   hundreds_vs_india_test?: number | null;
   hundreds_vs_australia_test?: number | null;
@@ -354,6 +354,18 @@ export function suggestPlayers(params: {
   query.set("limit", String(params.limit ?? 12));
   return api<{ items: PlayerListItem[] }>(`/api/v1/players/suggest?${query.toString()}`);
 }
+
+export const LEGACY_TEST_WICKET_KEYS = {
+  wickets_vs_pakistan: "wickets_vs_pakistan_test",
+  wickets_vs_india: "wickets_vs_india_test",
+  wickets_vs_australia: "wickets_vs_australia_test",
+  wickets_vs_england: "wickets_vs_england_test",
+  wickets_vs_south_africa: "wickets_vs_south_africa_test",
+  wickets_in_india: "wickets_in_india_test",
+  wickets_in_australia: "wickets_in_australia_test",
+  wickets_in_england: "wickets_in_england_test",
+  wickets_in_south_africa: "wickets_in_south_africa_test",
+} as const;
 
 export async function listAllPlayers() {
   const first = await api<PlayerListResponse>("/api/v1/players?page=1&page_size=100");

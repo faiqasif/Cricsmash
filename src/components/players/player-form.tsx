@@ -204,11 +204,11 @@ export function PlayerForm({ player, onBatchSave, onBatchClose }: PlayerFormProp
       for (const key of [
         "wickets_home_test",
         "wickets_away_test",
-        "wickets_vs_pakistan",
-        "wickets_vs_india",
-        "wickets_vs_australia",
-        "wickets_vs_england",
-        "wickets_vs_south_africa",
+        "wickets_vs_pakistan_test",
+        "wickets_vs_india_test",
+        "wickets_vs_australia_test",
+        "wickets_vs_england_test",
+        "wickets_vs_south_africa_test",
         "wickets_vs_pakistan_odi",
         "wickets_vs_india_odi",
         "wickets_vs_australia_odi",
@@ -219,10 +219,10 @@ export function PlayerForm({ player, onBatchSave, onBatchClose }: PlayerFormProp
         "wickets_vs_australia_t20",
         "wickets_vs_england_t20",
         "wickets_vs_south_africa_t20",
-        "wickets_in_india",
-        "wickets_in_australia",
-        "wickets_in_england",
-        "wickets_in_south_africa",
+        "wickets_in_india_test",
+        "wickets_in_australia_test",
+        "wickets_in_england_test",
+        "wickets_in_south_africa_test",
         "odi_wc_wickets",
         "odi_wc_bowling_strike_rate",
         "odi_wc_bowling_average",
@@ -801,11 +801,11 @@ export function PlayerForm({ player, onBatchSave, onBatchClose }: PlayerFormProp
               label="Number of wickets vs Pakistan, India, Australia, England and South Africa in Test"
               countries={OPPONENT_COUNTRIES}
               names={{
-                Pakistan: "wickets_vs_pakistan",
-                India: "wickets_vs_india",
-                Australia: "wickets_vs_australia",
-                England: "wickets_vs_england",
-                "South Africa": "wickets_vs_south_africa",
+                Pakistan: "wickets_vs_pakistan_test",
+                India: "wickets_vs_india_test",
+                Australia: "wickets_vs_australia_test",
+                England: "wickets_vs_england_test",
+                "South Africa": "wickets_vs_south_africa_test",
               }}
               values={formik.values}
               fieldError={fieldError}
@@ -815,10 +815,10 @@ export function PlayerForm({ player, onBatchSave, onBatchClose }: PlayerFormProp
             <CountryFields
               label="Number of wickets in India, Australia, England, South Africa"
               names={{
-                India: "wickets_in_india",
-                Australia: "wickets_in_australia",
-                England: "wickets_in_england",
-                "South Africa": "wickets_in_south_africa",
+                India: "wickets_in_india_test",
+                Australia: "wickets_in_australia_test",
+                England: "wickets_in_england_test",
+                "South Africa": "wickets_in_south_africa_test",
               }}
               values={formik.values}
               fieldError={fieldError}

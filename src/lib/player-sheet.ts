@@ -1,5 +1,5 @@
 import { COUNTRIES, customAppliesToForRole } from "@/data/cricket";
-import { isReleaseVersion, type FormatStats, type PlayerCustomField, type PlayerPayload } from "@/lib/players";
+import { isReleaseVersion, LEGACY_TEST_WICKET_KEYS, type FormatStats, type PlayerCustomField, type PlayerPayload } from "@/lib/players";
 import { showsBatting, showsBowling, showsHundreds, showsKeeping, showsWickets } from "@/validation/player";
 
 export type SheetKind = "text" | "number" | "date" | "bool" | "role" | "status" | "hand" | "country" | "custom";
@@ -109,11 +109,11 @@ export function playerColumns(
     career("batting_sr_vs_south_africa_t20", "T20 batting strike rate vs South Africa", "number", "Number.", "132"),
     career("wickets_home_test", "Test wickets at home", "number", "Whole number.", "80"),
     career("wickets_away_test", "Test wickets away", "number", "Whole number.", "60"),
-    career("wickets_vs_pakistan", "Test wickets vs Pakistan", "number", "Whole number.", "22"),
-    career("wickets_vs_india", "Test wickets vs India", "number", "Whole number.", "20"),
-    career("wickets_vs_australia", "Test wickets vs Australia", "number", "Whole number.", "18"),
-    career("wickets_vs_england", "Test wickets vs England", "number", "Whole number.", "15"),
-    career("wickets_vs_south_africa", "Test wickets vs South Africa", "number", "Whole number.", "12"),
+    career("wickets_vs_pakistan_test", "Test wickets vs Pakistan", "number", "Whole number.", "22"),
+    career("wickets_vs_india_test", "Test wickets vs India", "number", "Whole number.", "20"),
+    career("wickets_vs_australia_test", "Test wickets vs Australia", "number", "Whole number.", "18"),
+    career("wickets_vs_england_test", "Test wickets vs England", "number", "Whole number.", "15"),
+    career("wickets_vs_south_africa_test", "Test wickets vs South Africa", "number", "Whole number.", "12"),
     career("wickets_vs_pakistan_odi", "ODI wickets vs Pakistan", "number", "Whole number.", "18"),
     career("wickets_vs_india_odi", "ODI wickets vs India", "number", "Whole number.", "16"),
     career("wickets_vs_australia_odi", "ODI wickets vs Australia", "number", "Whole number.", "14"),
@@ -124,10 +124,10 @@ export function playerColumns(
     career("wickets_vs_australia_t20", "T20 wickets vs Australia", "number", "Whole number.", "6"),
     career("wickets_vs_england_t20", "T20 wickets vs England", "number", "Whole number.", "5"),
     career("wickets_vs_south_africa_t20", "T20 wickets vs South Africa", "number", "Whole number.", "4"),
-    career("wickets_in_india", "Wickets in India", "number", "Whole number.", "22"),
-    career("wickets_in_australia", "Wickets in Australia", "number", "Whole number.", "14"),
-    career("wickets_in_england", "Wickets in England", "number", "Whole number.", "11"),
-    career("wickets_in_south_africa", "Wickets in South Africa", "number", "Whole number.", "9"),
+    career("wickets_in_india_test", "Test wickets in India", "number", "Whole number.", "22"),
+    career("wickets_in_australia_test", "Test wickets in Australia", "number", "Whole number.", "14"),
+    career("wickets_in_england_test", "Test wickets in England", "number", "Whole number.", "11"),
+    career("wickets_in_south_africa_test", "Test wickets in South Africa", "number", "Whole number.", "9"),
     career("hundreds_vs_pakistan_test", "Test hundreds vs Pakistan", "number", "Whole number.", "2"),
     career("hundreds_vs_india_test", "Test hundreds vs India", "number", "Whole number.", "2"),
     career("hundreds_vs_australia_test", "Test hundreds vs Australia", "number", "Whole number.", "3"),
@@ -396,6 +396,10 @@ export function parsePlayerRows(
   for (const column of columns) {
     byHeader.set(headerKey(column.key), column);
     byHeader.set(headerKey(column.label), column);
+  }
+  for (const [oldKey, newKey] of Object.entries(LEGACY_TEST_WICKET_KEYS)) {
+    const column = columns.find((item) => item.key === newKey);
+    if (column) byHeader.set(headerKey(oldKey), column);
   }
   const ignored = new Set<string>();
   const rows: ParsedPlayerRow[] = [];

@@ -1,6 +1,6 @@
 import { api } from "@/lib/api";
 
-export type QuestionType = "player" | "general" | "tournament" | "image";
+export type QuestionType = "player" | "general" | "tournament" | "image" | "recent_match" | "famous_match";
 export type QuestionStatus = "active" | "inactive";
 
 export type Category = {
@@ -24,6 +24,35 @@ export type CategoryPayload = {
 };
 
 export const GENERAL_CATEGORY_NAME = "General Questions";
+export const RECENT_MATCHES_CATEGORY_NAME = "Recent Matches";
+export const FAMOUS_MATCHES_CATEGORY_NAME = "Famous Matches";
+
+export const CHOICE_QUESTION_SECTIONS = {
+  general: {
+    type: "general",
+    name: GENERAL_CATEGORY_NAME,
+    path: "/questions/general",
+    heading: "General Questions",
+  },
+  recent_match: {
+    type: "recent_match",
+    name: RECENT_MATCHES_CATEGORY_NAME,
+    path: "/questions/recent",
+    heading: "Recent Matches",
+  },
+  famous_match: {
+    type: "famous_match",
+    name: FAMOUS_MATCHES_CATEGORY_NAME,
+    path: "/questions/famous",
+    heading: "Famous Matches",
+  },
+} as const;
+
+export type ChoiceQuestionType = keyof typeof CHOICE_QUESTION_SECTIONS;
+
+export function choiceQuestionSection(type: string) {
+  return type in CHOICE_QUESTION_SECTIONS ? CHOICE_QUESTION_SECTIONS[type as ChoiceQuestionType] : null;
+}
 
 export function isQuizTournamentCategory(name: string) {
   const value = name.trim().toLowerCase().replace(/[\s-]+/g, "_");

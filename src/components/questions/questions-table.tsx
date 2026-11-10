@@ -35,6 +35,8 @@ type QuestionsTableProps = {
   showUsed?: boolean;
   used?: string;
   toolbarExtra?: React.ReactNode;
+  title?: string;
+  description?: string;
 };
 
 export function QuestionsTable({
@@ -61,6 +63,8 @@ export function QuestionsTable({
   showUsed = false,
   used = "",
   toolbarExtra,
+  title = "Questions",
+  description = "Create and manage all questions used in games and quizzes",
 }: QuestionsTableProps) {
   const empty = !loading && questions.length === 0;
   const from = total === 0 ? 0 : (page - 1) * pageSize + 1;
@@ -82,10 +86,10 @@ export function QuestionsTable({
           </button>
           <div>
             <h1 className="text-[28px] font-semibold tracking-tight text-white sm:text-[32px]">
-              Questions({total})
+              {title}({total})
             </h1>
             <p className="mt-1 text-sm text-zinc-500">
-              Create and manage all questions used in games and quizzes
+              {description}
             </p>
           </div>
         </div>
@@ -180,7 +184,7 @@ export function QuestionsTable({
                   {showCategoryFilter ? (
                     <td className="px-5 py-4">
                       <span className="inline-flex rounded-full bg-purple/15 px-3 py-1 text-xs font-medium text-purple">
-                        {question.category_name}
+                        {categories.find((item) => item.id === question.category_id)?.name || question.category_name}
                       </span>
                     </td>
                   ) : null}

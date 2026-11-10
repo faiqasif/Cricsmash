@@ -1,6 +1,8 @@
 import type { LucideIcon } from "lucide-react";
 import {
   FileQuestion,
+  History,
+  Medal,
   FolderOpen,
   Gamepad2,
   HelpCircle,
@@ -38,6 +40,8 @@ export const navItems: NavItem[] = [
     icon: MessageCircleQuestion,
   },
   { label: "General Questions", href: "/questions/general", icon: FileQuestion },
+  { label: "Recent Matches", href: "/questions/recent", icon: History },
+  { label: "Famous Matches", href: "/questions/famous", icon: Medal },
   { label: "Games", href: "/games", icon: Gamepad2 },
   { label: "Guess the Player Stats", href: "/games/guess-player-stats", icon: Target },
   { label: "Stat Version Numbers", href: "/guess-stat-versions", icon: ListOrdered },

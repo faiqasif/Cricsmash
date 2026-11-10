@@ -16,26 +16,13 @@ function breadcrumbsFor(pathname: string): { parent: string; current: string; pa
   if (pathname.startsWith("/players/") && pathname.endsWith("/edit")) {
     return { parent: "Players", current: "Edit player", parentHref: "/players" };
   }
-  if (pathname === "/questions/player/new" || pathname === "/questions/general/new" || pathname === "/questions/tournament/new") {
-    const parentHref = pathname.startsWith("/questions/general")
-      ? "/questions/general"
-      : pathname.startsWith("/questions/tournament")
-        ? "/questions/tournament"
-        : "/questions/player";
-    return { parent: "Question", current: "Add a new question", parentHref };
+  const questionSection = pathname.match(/^\/questions\/(player|general|tournament|recent|famous)(?:\/|$)/)?.[1];
+  const questionParent = questionSection ? `/questions/${questionSection}` : "";
+  if (questionSection && pathname === `${questionParent}/new`) {
+    return { parent: "Question", current: "Add a new question", parentHref: questionParent };
   }
-  if (
-    (pathname.startsWith("/questions/player/") ||
-      pathname.startsWith("/questions/general/") ||
-      pathname.startsWith("/questions/tournament/")) &&
-    pathname.endsWith("/edit")
-  ) {
-    const parentHref = pathname.startsWith("/questions/general")
-      ? "/questions/general"
-      : pathname.startsWith("/questions/tournament")
-        ? "/questions/tournament"
-        : "/questions/player";
-    return { parent: "Question", current: "Edit question", parentHref };
+  if (questionSection && pathname.startsWith(`${questionParent}/`) && pathname.endsWith("/edit")) {
+    return { parent: "Question", current: "Edit question", parentHref: questionParent };
   }
   if (pathname === "/tournaments/new") {
     return { parent: "Tournament", current: "Add a new Tournament", parentHref: "/tournaments" };
@@ -81,6 +68,8 @@ export function TopBar({ onMenuClick }: TopBarProps) {
     pathname === "/questions/player" ||
     pathname === "/questions/general" ||
     pathname === "/questions/tournament" ||
+    pathname === "/questions/recent" ||
+    pathname === "/questions/famous" ||
     pathname === "/tournaments" ||
     pathname === "/categories" ||
     pathname === "/games" ||
