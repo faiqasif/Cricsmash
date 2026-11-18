@@ -101,6 +101,8 @@ export async function publishQueuedStatVersion() {
     updated_at: now,
   };
   if (release) catalogData.release_version = release;
+  const playersJson = typeof catalog?.data.players_json_path === "string" ? catalog.data.players_json_path : "";
+  if (playersJson) catalogData.players_json_path = playersJson;
   const catalogWrite = replaceWrite("playerCatalog", "current", catalogData);
   catalogWrite.currentDocument = catalog?.updateTime ? { updateTime: catalog.updateTime } : { exists: false };
   const writes = [

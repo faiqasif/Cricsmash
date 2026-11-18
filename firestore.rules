@@ -142,13 +142,14 @@ service cloud.firestore {
     }
 
     function isValidPlayerCatalog(data) {
-      return data.keys().hasOnly(['version', 'release_version', 'updated_at', 'player_version_number', 'guess_the_stat_version_number'])
+      return data.keys().hasOnly(['version', 'release_version', 'updated_at', 'player_version_number', 'guess_the_stat_version_number', 'players_json_path'])
         && data.version is int
         && data.version >= 0
         && data.updated_at is string
         && (!data.keys().hasAny(['release_version']) || isReleaseVersion(data.release_version))
         && (!data.keys().hasAny(['player_version_number']) || (data.player_version_number is int && data.player_version_number >= 0))
-        && (!data.keys().hasAny(['guess_the_stat_version_number']) || (data.guess_the_stat_version_number is int && data.guess_the_stat_version_number >= 0));
+        && (!data.keys().hasAny(['guess_the_stat_version_number']) || (data.guess_the_stat_version_number is int && data.guess_the_stat_version_number >= 0))
+        && (!data.keys().hasAny(['players_json_path']) || isString(data.players_json_path, 1, 120));
     }
 
     function isSinglePlayerChange(data) {

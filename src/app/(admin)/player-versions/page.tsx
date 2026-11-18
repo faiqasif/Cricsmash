@@ -19,6 +19,7 @@ type VersionList = {
   current_version?: string;
   next_version: string;
   pending_count?: number;
+  players_json_path?: string;
 };
 
 function formatWhen(value: string) {
@@ -33,6 +34,7 @@ export default function PlayerVersionsPage() {
   const [currentVersion, setCurrentVersion] = useState("");
   const [nextVersion, setNextVersion] = useState("");
   const [pendingCount, setPendingCount] = useState(0);
+  const [jsonPath, setJsonPath] = useState("");
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState("");
@@ -45,6 +47,7 @@ export default function PlayerVersionsPage() {
     setCurrentVersion(data.current_version || "");
     setNextVersion(data.next_version);
     setPendingCount(data.pending_count ?? 0);
+    setJsonPath(data.players_json_path ?? "");
   }
 
   useEffect(() => {
@@ -128,6 +131,7 @@ export default function PlayerVersionsPage() {
         {pendingCount === 0
           ? "No player changes are waiting. Saves update the players immediately and stay here until you create a version."
           : `${pendingCount} player${pendingCount === 1 ? "" : "s"} will be included in ${nextVersion || "the next version"}. New players are included too.`}
+        {jsonPath ? ` Phones download ${jsonPath} from Storage when this version changes.` : " Creating a version also saves the full player list as a JSON file in Storage."}
       </p>
 
       {notice ? (

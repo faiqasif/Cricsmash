@@ -1,5 +1,6 @@
 import { commitWrites, deleteWrite, getDocument, listDocuments, replaceWrite, type StoredDocument } from "@/lib/firebase";
 import { compareReleaseVersions, isReleaseVersion, nextReleaseVersion } from "@/lib/players";
+import { playersJsonPath, uploadPlayersSnapshot } from "@/server/player-storage";
 export class PlayerVersionError extends Error {
   constructor(message: string) {
     super(message);
@@ -172,7 +173,7 @@ function wholeNumber(value: unknown, fallback: number) {
 
 function catalogRecord(
   now: string,
-  next: { version: number; release: string | null; playerVersionNumber: number; guessStatVersion: number },
+  next: { version: number; release: string | null; playerVersionNumber: number; guessStatVersion: number; playersJsonPath?: string },
 ) {
   const data: Record<string, unknown> = {
     version: next.version,
@@ -181,6 +182,7 @@ function catalogRecord(
     updated_at: now,
   };
   if (next.release) data.release_version = next.release;
+  if (next.playersJsonPath) data.players_json_path = next.playersJsonPath;
   return data;
 }
 
@@ -241,6 +243,7 @@ export async function commitPlayerWrites(
           }),
         );
         release = newerRelease(release, groupedRelease);
+        await uploadPlayersSnapshot(version, groupedRelease);
       } else {
         const playerVersion = Math.max(version, 1);
         for (const write of writes) {
@@ -267,6 +270,7 @@ export async function commitPlayerWrites(
           release,
           playerVersionNumber: version,
           guessStatVersion: wholeNumber(catalog?.data.guess_the_stat_version_number, 0),
+          playersJsonPath: playersJsonPath(version),
         }),
       );
       catalogWrite.currentDocument = catalog?.updateTime ? { updateTime: catalog.updateTime } : { exists: false };
@@ -296,6 +300,7 @@ export async function publishQueuedVersion() {
       if (ready.length > 300) throw new PlayerVersionError("Create a version before more than 300 players are waiting.");
       const release = nextReleaseVersion(releaseLabel(catalog?.data.release_version));
       const version = catalogVersion(catalog) + 1;
+      await uploadPlayersSnapshot(version, release);
       const players = ready.map((item) => ({
         player_id: typeof item.data.player_id === "string" ? item.data.player_id : item.id,
         op: item.data.op === "delete" ? "delete" : "upsert",
@@ -318,6 +323,7 @@ export async function publishQueuedVersion() {
           release,
           playerVersionNumber: version,
           guessStatVersion: wholeNumber(catalog?.data.guess_the_stat_version_number, 0),
+          playersJsonPath: playersJsonPath(version),
         }),
       );
       catalogWrite.currentDocument = catalog?.updateTime ? { updateTime: catalog.updateTime } : { exists: false };
